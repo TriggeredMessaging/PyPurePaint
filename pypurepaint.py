@@ -59,13 +59,14 @@ class PureResponseClient(object):
         SEARCH  = 'bus_search'
     
     class FIELDS:
-        USERNAME        = 'username'
+        USERNAME        = 'userName'
         PASSWORD        = 'password'
         MESSAGE_ID      = 'messageId'
         MESSAGE_NAME    = 'messageName'
         BEAN_ID         = 'beanId'
         LIST_IDS        = 'listIds'
         LIST_ID         = 'listId'
+        LIST_NAME       = 'listName'
         DELIVERY_TIME   = 'deliveryDtTm'
         FOUND_DATA      = 'idData'
         RESULT          = 'result'
@@ -73,11 +74,14 @@ class PureResponseClient(object):
         MSG_MSG_NAME    = 'message_messageName'
         TO_ADDRESS      = 'toAddress'
         CUSTOM_DATA     = 'customData'
+        UPLOAD_TYPE     = 'uploadTransactionType'
+        PASTE_FILE      = 'pasteFile'
     
     class VALUES:
+        APPEND                  = 'APPEND'
         SUCCESS                 = 'success'
-        SCHEDULING_DELAY        = 3
         SCHEDULING_UNIT         = 'minutes'
+        SCHEDULING_DELAY        = 3
     
     class EXCEPTIONS:
         VALIDATION          = 'bean_exception_validation'
@@ -266,7 +270,15 @@ class PureResponseClient(object):
           , self._response_data(response)
         )
     
+    def _api_append_contact_list():
+        return False
+    
     def api_add_contact(self, list_name, contact):
+        entity_data = dict({
+            PureResponseClient.FIELDS.LIST_NAME : list_name
+          , PureResponseClient.FIELDS.UPLOAD_TYPE : PureResponseClient.VALUES.APPEND
+          , PureResponseClient.FIELDS.PASTE_FILE : self._dict_to_csv(contact)
+        }, **self._build_contact_entity(contact))
         return False
     
     def api_add_contacts(self, list_name, contacts):
@@ -364,6 +376,9 @@ class PureResponseClient(object):
                 dict_[key_] = getattr(val_, PureResponseClient.TYPES.KEYS.STRING)
         return dict_
     
+    def _dict_to_csv(self, dict_):
+        
+        return False
     
     
     
