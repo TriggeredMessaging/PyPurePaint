@@ -204,10 +204,12 @@ class PureResponseClient(object):
               , PureResponseClient.BEAN_TYPES.SEARCH
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
             )
+            #print found
+            #print len(found) is 1
             if len(found) is 1:
-                delivery_input[PureResponseClient.FIELDS.MESSAGE_ID] = {
-                    found['0'].get(PureResponseClient.FIELDS.MESSAGE_ID)
-                }
+                delivery_input[
+                    PureResponseClient.FIELDS.MESSAGE_ID
+                ] = found['0'].get(PureResponseClient.FIELDS.MESSAGE_ID)
             else:
                 return self._dict_err(
                     PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
@@ -221,13 +223,14 @@ class PureResponseClient(object):
         schedule_time = datetime.datetime.now() + datetime.timedelta(**scheduling_delay)
         schedule_time = schedule_time.strftime('%d/%m/%Y %H:%M')
         delivery_input[PureResponseClient.FIELDS.DELIVERY_TIME] = schedule_time
-        
+        print self._dict_to_ptarr(delivery_input)
         response = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
-          , PureResponseClient.BEAM_PROCESSES.STORE
+          , PureResponseClient.BEAN_PROCESSES.STORE
           , delivery_input
         )
+        print response
         if self._result_success(response):
             return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
         else:
@@ -241,7 +244,8 @@ class PureResponseClient(object):
         entity_data = {PureResponseClient.FIELDS.TO_ADDRESS : email_to}
         if custom_data is not None:
             entity_data[PureResponseClient.FIELDS.CUSTOM_DATA] = custom_data
-        
+        print process_data
+        print entity_data
         create = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_ONE_TO_ONE
@@ -266,7 +270,7 @@ class PureResponseClient(object):
               , entity_data
             )
             
-            if self._result_sucess(response):
+            if self._result_success(response):
                 return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
             else:
                 return self._dict_err(
@@ -309,12 +313,15 @@ class PureResponseClient(object):
           , self._response_data(response)
         )
     
-    def api_add_contact(self, list_name, contact):
+    def _api_add_contact_ambiguous(self, list_name, contact_data):
         entity_data = {
             PureResponseClient.FIELDS.LIST_NAME     : list_name
           , PureResponseClient.FIELDS.UPLOAD_TYPE   : PureResponseClient.VALUES.APPEND
         }
-        paste_file = self._dict_to_csv(contact)
+        if isinstance(contact_data, list):
+            paste_file = self._dictlist_to_csv(contact_data)
+        else:
+            paste_file = self._dict_to_csv(contact_data)
         entity_data[PureResponseClient.FIELDS.PASTE_FILE + '_base64'] = base64.b64encode(
             paste_file
         )
@@ -323,23 +330,13 @@ class PureResponseClient(object):
           , **self._build_contact_entity(paste_file)
         )
         return self._api_append_contact_list(entity_data)
+        
+    def api_add_contact(self, list_name, contact):
+        return self._api_add_contact_ambiguous(list_name, contact)
     
     def api_add_contacts(self, list_name, contacts):
-        entity_data = {
-            PureResponseClient.FIELDS.LIST_NAME     : list_name
-          , PureResponseClient.FIELDS.UPLOAD_TYPE   : PureResponseClient.VALUES.APPEND
-          , PureResponseClient.FIELDS.PASTE_FILE    : self._dictlist_to_csv(contacts)
-        }
-        
-        entity_data = dict(
-            entity_data
-          , **self._build_contact_entity(entity_data.get(PureResponseClient.FIELDS.PASTE_FILE))
-        )
-        return self._api_append_contact_list(entity_data)
+        return self._api_add_contact_ambiguous(list_name, contacts)
     
-    # Direct access to PAINT. Other than converting to a dictionary
-    # I will perform no error handling or wrapping
-    # We're all adults here.
     def api_make_request(self, bean_type, bean_class, bean_process
       , entity_data = None, process_data = None, no_response = False):
         if self.api_context or (bean_process is PureResponseClient.BEAN_PROCESSES.AUTHENTICATE):
@@ -409,7 +406,14 @@ class PureResponseClient(object):
             elif isinstance(dict_[key_], str):
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, dict_[key_])
             elif isinstance(dict_[key_], unicode):
-                setattr(val_, PureResponseClient.TYPES.KEYS.STRING, dict_[key_].encode('utf-8'))
+                setattr(val_, PureResponseClient.TYPES.KEYS.STRING, base64.b64encode(
+                    dict_[key_].encode('utf-8')
+                ))
+                setattr(
+                    kvp_
+                  , PureResponseClient.TYPES.KEYS.KEY
+                  , getattr(kvp_, PureResponseClient.TYPES.KEYS.KEY) + '_base64'
+                )
             else:
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, str(dict_[key_]))
             getattr(arr_, PureResponseClient.TYPES.KEYS.PAIRS).append(kvp_)
