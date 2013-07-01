@@ -86,6 +86,7 @@ class PureResponseClient(object):
         FIELD_PARTIAL   = 'field'
         COLUMN_PARTIAL  = 'Col'
         NAME_PARTIAL    = 'Name'
+        BASE64_PARTIAL  = '_base64'
     
     class VALUES:
         APPEND                  = 'APPEND'
@@ -204,8 +205,6 @@ class PureResponseClient(object):
               , PureResponseClient.BEAN_TYPES.SEARCH
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
             )
-            #print found
-            #print len(found) is 1
             if len(found) is 1:
                 delivery_input[
                     PureResponseClient.FIELDS.MESSAGE_ID
@@ -223,14 +222,14 @@ class PureResponseClient(object):
         schedule_time = datetime.datetime.now() + datetime.timedelta(**scheduling_delay)
         schedule_time = schedule_time.strftime('%d/%m/%Y %H:%M')
         delivery_input[PureResponseClient.FIELDS.DELIVERY_TIME] = schedule_time
-        print self._dict_to_ptarr(delivery_input)
+        
         response = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
           , PureResponseClient.BEAN_PROCESSES.STORE
           , delivery_input
         )
-        print response
+        
         if self._result_success(response):
             return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
         else:
@@ -244,8 +243,7 @@ class PureResponseClient(object):
         entity_data = {PureResponseClient.FIELDS.TO_ADDRESS : email_to}
         if custom_data is not None:
             entity_data[PureResponseClient.FIELDS.CUSTOM_DATA] = custom_data
-        print process_data
-        print entity_data
+        
         create = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_ONE_TO_ONE
@@ -322,7 +320,8 @@ class PureResponseClient(object):
             paste_file = self._dictlist_to_csv(contact_data)
         else:
             paste_file = self._dict_to_csv(contact_data)
-        entity_data[PureResponseClient.FIELDS.PASTE_FILE + '_base64'] = base64.b64encode(
+        entity_data[PureResponseClient.FIELDS.PASTE_FILE
+            + PureResponseClient.FIELDS.BASE64_PARTIAL] = base64.b64encode(
             paste_file
         )
         entity_data = dict(
@@ -393,6 +392,19 @@ class PureResponseClient(object):
     def _dict_err(self, error, meta):
         return {'ok' : False, 'result' : error, 'meta' : meta}
     
+    def _unicode_exceptions(self, key):
+        exceptions = [
+            PureResponseClient.FIELDS.BEAN_ID
+          , PureResponseClient.FIELDS.MESSAGE_ID
+        ]
+        if key.isdigit():
+            return True
+        else:
+            for field in exceptions:
+                if key == unicode(field):
+                    return True
+            return False
+    
     def _dict_to_ptarr(self, dict_):
         if not dict_:
             return suds.null()
@@ -403,7 +415,8 @@ class PureResponseClient(object):
             val_ = getattr(kvp_, PureResponseClient.TYPES.KEYS.VALUE)
             if isinstance(dict_[key_], dict):
                 setattr(val_, PureResponseClient.TYPES.KEYS.ARRAY, self._dict_to_ptarr(dict_[key_]))
-            elif isinstance(dict_[key_], str):
+            elif (isinstance(dict_[key_], str) or 
+                (isinstance(dict_[key_], unicode) and self._unicode_exceptions(key_))):
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, dict_[key_])
             elif isinstance(dict_[key_], unicode):
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, base64.b64encode(
@@ -412,7 +425,8 @@ class PureResponseClient(object):
                 setattr(
                     kvp_
                   , PureResponseClient.TYPES.KEYS.KEY
-                  , getattr(kvp_, PureResponseClient.TYPES.KEYS.KEY) + '_base64'
+                  , getattr(kvp_, PureResponseClient.TYPES.KEYS.KEY) 
+                    + PureResponseClient.FIELDS.BASE64_PARTIAL
                 )
             else:
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, str(dict_[key_]))
