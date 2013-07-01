@@ -13,6 +13,8 @@ import datetime
 from time import strftime as strftime
 import suds
 from suds.client import Client as SudsPaint
+import StringIO
+import csv
 
 class PureResponseClient(object):
     version = '0.1'
@@ -119,13 +121,11 @@ class PureResponseClient(object):
               , PureResponseClient.FIELDS.PASSWORD : self.api_password
             }
         )
-        
         if self._result_success(auth):
-            self.api_context = self.response_data(
+            self.api_context = self._get_bean_id(
                 auth
-              , PureResponseClient.BEAN_TYPE_ENTITY
+              , PureResponseClient.BEAN_TYPES.ENTITY
               , PureResponseClient.BEAN_CLASSES.CONTEXT
-              , PureResponseClient.FIELDS.BEAN_ID
             )
             return self._dict_ok(self.api_context)
         elif self._result_exception(auth, PureResponseClient.EXCEPTIONS.VALIDATION):
@@ -143,7 +143,7 @@ class PureResponseClient(object):
         self.api_context = None
     
     def api_send_to_list(self, list_name, message_name, scheduling_delay = {
-        PureResponseClient.VALUES.SCHEDULING_UNIT : PureResponseClient.VALUES.SCHEDULING_DELAY}):
+        VALUES.SCHEDULING_UNIT : VALUES.SCHEDULING_DELAY}):
         create = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
@@ -335,7 +335,10 @@ class PureResponseClient(object):
         else:
             return PureResponseClient.ERRORS.NOT_AUTHENTICATED
     
-    def _response_data(self, response_dict, bean_type = None, bean_class = None, field = PureResponseClient.FIELDS.RESULT_DATA):
+    def _response_data(self, response_dict, bean_type = None
+        , bean_class = None, field = FIELDS.RESULT_DATA):
+        #print response_dict
+        #print bean_type
         if bean_type and bean_class:
             return response_dict[field][bean_type + '_' + bean_class]
         elif bean_type or bean_class:
@@ -344,10 +347,10 @@ class PureResponseClient(object):
             return response_dict[field]
     
     def _get_result(self, response):
-        return self._response_data(response=response, field=PureResponseClient.FIELDS.RESULT)
+        return self._response_data(response, field=PureResponseClient.FIELDS.RESULT)
     
     def _result_success(self, response):
-        return self._get_result(response) is PureResponseClient.VALUES.SUCCESS
+        return self._get_result(response) == PureResponseClient.VALUES.SUCCESS
     
     def _get_bean_id(self, response, bean_type, bean_class):
         return self._response_data(
@@ -406,19 +409,31 @@ class PureResponseClient(object):
                 dict_[key_] = getattr(val_, PureResponseClient.TYPES.KEYS.STRING)
         return dict_
     
-    def _dict_to_csv(self, dict_):
+    def _write_csv(self):
+        return False
+    
+    def _dictlist_to_csv(self, list_):
+        master = set()
+        for row in list_:
+            master = master.union(row.keys())
+        master = sorted(list(master))
+        csv_string = StringIO.StringIO()
+        csv_writer = csv.DictWriter(csv_string, master)
+        csv_writer.writerow(dict([ (k, k) for k in master ]))
+        for item in list_:
+            csv_writer.writerow(dict([ (k, v.encode('utf-8')) for k, v in item.iteritems() ]))
+        output = csv_string.getvalue()
+        csv_string.close()
+        return output
         
+    def _dict_to_csv(self, dict_):
+    ## MASTER LIST OF KEYS, LOOP THROUGH ONES AND UNION WITH NEW ARRAY OF KEYS, 
+    # THAT ARRAY MAY BE USED AS FIELDNAMES?
         return False
     
     
     
-    
-    
-    
-    
-    
-    
-    
+    #s = dict([ (k,r) for k,r in mydict.iteritems() if r['x'] > 92 and r['x'] < 95 and r['y'] > 70 and r['y'] < 75 ])
     
     
     
