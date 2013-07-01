@@ -15,6 +15,7 @@ import suds
 from suds.client import Client as SudsPaint
 import StringIO
 import csv
+import base64
 
 class PureResponseClient(object):
     version = '0.1'
@@ -289,7 +290,6 @@ class PureResponseClient(object):
               , PureResponseClient.BEAN_TYPES.ENTITY
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
             )
-            
             response = self.api_make_request(
                 PureResponseClient.BEAN_TYPES.FACADE
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
@@ -313,12 +313,14 @@ class PureResponseClient(object):
         entity_data = {
             PureResponseClient.FIELDS.LIST_NAME     : list_name
           , PureResponseClient.FIELDS.UPLOAD_TYPE   : PureResponseClient.VALUES.APPEND
-          , PureResponseClient.FIELDS.PASTE_FILE    : self._dict_to_csv(contact)
         }
-        
+        paste_file = self._dict_to_csv(contact)
+        entity_data[PureResponseClient.FIELDS.PASTE_FILE + '_base64'] = base64.b64encode(
+            paste_file
+        )
         entity_data = dict(
             entity_data
-          , **self._build_contact_entity(entity_data.get(PureResponseClient.FIELDS.PASTE_FILE))
+          , **self._build_contact_entity(paste_file)
         )
         return self._api_append_contact_list(entity_data)
     
@@ -404,8 +406,10 @@ class PureResponseClient(object):
             val_ = getattr(kvp_, PureResponseClient.TYPES.KEYS.VALUE)
             if isinstance(dict_[key_], dict):
                 setattr(val_, PureResponseClient.TYPES.KEYS.ARRAY, self._dict_to_ptarr(dict_[key_]))
-            elif isinstance(dict_[key_], str) or isinstance(dict_[key_], unicode):
+            elif isinstance(dict_[key_], str):
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, dict_[key_])
+            elif isinstance(dict_[key_], unicode):
+                setattr(val_, PureResponseClient.TYPES.KEYS.STRING, dict_[key_].encode('utf-8'))
             else:
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, str(dict_[key_]))
             getattr(arr_, PureResponseClient.TYPES.KEYS.PAIRS).append(kvp_)
@@ -433,9 +437,11 @@ class PureResponseClient(object):
         count       = 0
         custom      = 0
         for key in csv_string.splitlines()[0].split(','):
-            if key is PureResponseClient.FIELDS.EMAIL:
+            if ((key is PureResponseClient.FIELDS.EMAIL) or 
+                (key == unicode(PureResponseClient.FIELDS.EMAIL))):
                 entity_data[PureResponseClient.FIELDS.EMAIL_COLUMN] = count
-            elif key is PureResponseClient.FIELDS.MOBILE:
+            elif ((key is PureResponseClient.FIELDS.MOBILE) or 
+                (key == unicode(PureResponseClient.FIELDS.MOBILE))):
                 entity_data[PureResponseClient.FIELDS.MOBILE_COLUMN] = count
             else:
                 field_whole = PureResponseClient.FIELDS.FIELD_PARTIAL + str(count)
