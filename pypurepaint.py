@@ -212,7 +212,13 @@ class PureResponseClient(object):
           , PureResponseClient.BEAM_PROCESSES.STORE
           , delivery_input
         )
-        # Note to self, this is where im at.
+        if self._result_success(response):
+            return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
+        else:
+            return self._dict_err(
+                PureResponseClient.ERRORS.COULD_NOT_DELIVER
+              , self._response_data(response)
+            )
     
     def api_send_to_contact(self, email_to, message_name, custom_data):
         return False
