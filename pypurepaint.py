@@ -9,6 +9,8 @@
 #   Authored by Mikael Kohlmyr
 #
 
+import datetime
+from time import strftime as strftime
 import suds
 from suds.client import Client as SudsPaint
 
@@ -60,15 +62,19 @@ class PureResponseClient(object):
         USERNAME        = 'username'
         PASSWORD        = 'password'
         MESSAGE_ID      = 'messageId'
+        MESSAGE_NAME    = 'messageName'
         BEAN_ID         = 'beanId'
         LIST_IDS        = 'listIds'
-        DELIVERY_DATE   = 'deliveryDtTm'
+        LIST_ID         = 'listId'
+        DELIVERY_TIME   = 'deliveryDtTm'
         FOUND_DATA      = 'idData'
         RESULT          = 'result'
         RESULT_DATA     = 'resultData'
     
     class VALUES:
         SUCCESS                 = 'success'
+        SCHEDULING_DELAY        = 3
+        SCHEDULING_UNIT         = 'minutes'
     
     class EXCEPTIONS:
         VALIDATION          = 'bean_exception_validation'
@@ -84,6 +90,7 @@ class PureResponseClient(object):
         CAMPAIGN_NOT_FOUND  = 'ERROR_CAMPAIGN_NOT_FOUND'
         BEAN_NOT_CREATED    = 'ERROR_BEAN_NOT_CREATED'
         COULD_NOT_DELIVER   = 'ERROR_COULD_NOT_DELIVER'
+        INVALID_PARAMS      = 'ERROR_INVALID_PARAMETERS'
     
     def __init__(self, api_username = '', api_password = ''
         , api_version = API.RPC_LITERAL_UNBRANDED):
@@ -122,14 +129,90 @@ class PureResponseClient(object):
     def api_invalidate(self):
         self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
-          , PureResponseClient.BEAN_CLASS.CONTEXT
+          , PureResponseClient.BEAN_CLASSES.CONTEXT
           , PureResponseClient.BEAN_PROCESSES.INVALIDATE
           , no_response = True
         )
         self.api_context = None
     
-    def api_send_to_list(self, list_name, message_name):
-        return False
+    def api_send_to_list(self, list_name, message_name, scheduling_delay = {
+        PureResponseClient.VALUES.SCHEDULING_UNIT : PureResponseClient.VALUES.SCHEDULING_DELAY}):
+        create = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
+          , PureResponseClient.BEAN_PROCESSES.CREATE
+        )
+        delivery_input = {
+            PureResponseClient.FIELDS.BEAN_ID : self._get_bean_id(
+                create, PureResponseClient.BEAN_TYPES.ENTITY
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
+            )
+        }
+        search_response = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+          , PureResponseClient.BEAN_PROCESSES.SEARCH
+          , {PureResponseClient.FIELDS.LIST_NAME : list_name}
+        )
+        if self._result_success(search_response):
+            found = self._get_found_data(
+                search_response
+              , PureResponseClient.BEAN_TYPES.SEARCH
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+            )
+            if len(found) is not 0:
+                delivery_input[PureResponseClient.FIELDS.LIST_IDS] = {
+                    '0': found['0'].get(PureResponseClient.FIELDS.LIST_ID)
+                }
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.ERROR_CAMPAIGN_NOT_FOUND
+                  , self._response_data(search_response)
+                )
+        else:
+            return self._dict_err(
+                PureResponseClient.ERRORS.GENERIC
+              , self._response_data(search_response)
+            )
+        
+        search_response = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+          , PureResponseClient.BEAN_PROCESSES.SEARCH
+          , {PureResponseClient.FIELDS.MESSAGE_NAME : message_name}
+        )
+        
+        if self._result_success(search_response):
+            found = self._get_found_data(
+                search_response
+              , PureResponseClient.BEAN_TYPES.SEARCH
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+            )
+            if len(found) is 1:
+                delivery_input[PureResponseClient.FIELDS.MESSAGE_ID] = {
+                    found['0'].get(PureResponseClient.FIELDS.MESSAGE_ID)
+                }
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
+                  , self._response_data(search_response)
+                )
+        else:
+            return self._dict_err(
+                PureResponseClient.ERRORS.GENERIC
+              , self._response_data(search_response)
+            )
+        schedule_time = datetime.datetime.now() + datetime.timedelta(**scheduling_delay)
+        schedule_time = schedule_time.strftime('%d/%m/%Y %H:%M')
+        delivery_input[PureResponseClient.FIELDS.DELIVERY_TIME] = schedule_time
+        
+        response = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
+          , PureResponseClient.BEAM_PROCESSES.STORE
+          , delivery_input
+        )
+        # Note to self, this is where im at.
     
     def api_send_to_contact(self, email_to, message_name, custom_data):
         return False
@@ -165,7 +248,7 @@ class PureResponseClient(object):
         if bean_type and bean_class:
             return response_dict[field][bean_type + '_' + bean_class]
         elif bean_type or bean_class:
-            return False # raise exception?
+            raise Exception(PureResponseClient.ERRORS.INVALID_PARAMS)
         else:
             return response_dict[field]
     
@@ -174,6 +257,20 @@ class PureResponseClient(object):
     
     def _result_success(self, response):
         return self._get_result(response) is PureResponseClient.VALUES.SUCCESS
+    
+    def _get_bean_id(self, response, bean_type, bean_class):
+        return self._response_data(
+            response
+          , bean_type
+          , bean_class
+        ).get(PureResponseClient.FIELDS.BEAN_ID)
+    
+    def _get_found_data(self, response, bean_type, bean_class):
+        return self._response_data(
+            response
+          , bean_type
+          , bean_class
+        ).get(PureResponseClient.FIELDS.FOUND_DATA)
     
     def _result_exception(self, response, exception):
         return self._get_result(response) is exception
