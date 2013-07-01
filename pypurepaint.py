@@ -70,6 +70,9 @@ class PureResponseClient(object):
         FOUND_DATA      = 'idData'
         RESULT          = 'result'
         RESULT_DATA     = 'resultData'
+        MSG_MSG_NAME    = 'message_messageName'
+        TO_ADDRESS      = 'toAddress'
+        CUSTOM_DATA     = 'customData'
     
     class VALUES:
         SUCCESS                 = 'success'
@@ -144,7 +147,8 @@ class PureResponseClient(object):
         )
         delivery_input = {
             PureResponseClient.FIELDS.BEAN_ID : self._get_bean_id(
-                create, PureResponseClient.BEAN_TYPES.ENTITY
+                create
+              , PureResponseClient.BEAN_TYPES.ENTITY
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
             )
         }
@@ -220,8 +224,47 @@ class PureResponseClient(object):
               , self._response_data(response)
             )
     
-    def api_send_to_contact(self, email_to, message_name, custom_data):
-        return False
+    def api_send_to_contact(self, email_to, message_name, custom_data = None):
+        process_data = {PureResponseClient.FIELDS.MSG_MSG_NAME : message_name}
+        entity_data = {PureResponseClient.FIELDS.TO_ADDRESS : email_to}
+        if custom_data is not None:
+            entity_data[PureResponseClient.FIELDS.CUSTOM_DATA] = custom_data
+        
+        create = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_ONE_TO_ONE
+          , PureResponseClient.BEAN_PROCESSES.CREATE
+          , entity_data
+          , process_data
+        )
+        
+        if self._result_success(create):
+            entity_data = {
+                PureResponseClient.FIELDS.BEAN_ID : self._get_bean_id(
+                    create
+                  , PureResponseClient.BEAN_TYPES.ENTITY
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_ONE_TO_ONE
+                )
+            }
+            
+            response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_ONE_TO_ONE
+              , PureResponseClient.BEAN_PROCESSES.STORE
+              , entity_data
+            )
+            
+            if self._result_sucess(response):
+                return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.COULD_NOT_DELIVER
+                  , self._response_data(response)
+                )
+        return self._dict_err(
+            PureResponseClient.ERRORS.GENERIC
+          , self._response_data(response)
+        )
     
     def api_add_contact(self, list_name, contact):
         return False
