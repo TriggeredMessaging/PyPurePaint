@@ -270,7 +270,37 @@ class PureResponseClient(object):
           , self._response_data(response)
         )
     
-    def _api_append_contact_list():
+    def _api_append_contact_list(self, entity_data):
+        create = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+          , PureResponseClient.BEAN_PROCESSES.CREATE
+        )
+        if self._result_success(create):
+            entity_data[PureResponseClient.FIELDS.BEAN_ID] = self._get_bean_id(
+                create
+              , PureResponseClient.BEAN_TYPES.ENTITY
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+            )
+            
+            response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+              , PureResponseClient.BEAN_PROCESSES.STORE
+              , entity_data
+            )
+            
+            if self._result_success(response):
+                return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.LIST_NOT_SAVED
+                  , self._response_data(response)
+                )
+        return self._dict_err(
+            PureResponseClient.ERRORS.GENERIC
+          , self._response_data(response)
+        )
         return False
     
     def api_add_contact(self, list_name, contact):
@@ -279,7 +309,7 @@ class PureResponseClient(object):
           , PureResponseClient.FIELDS.UPLOAD_TYPE : PureResponseClient.VALUES.APPEND
           , PureResponseClient.FIELDS.PASTE_FILE : self._dict_to_csv(contact)
         }, **self._build_contact_entity(contact))
-        return False
+        return self._api_append_contact_list(entity_data)
     
     def api_add_contacts(self, list_name, contacts):
         return False
