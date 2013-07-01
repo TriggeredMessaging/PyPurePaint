@@ -63,6 +63,10 @@ class PureResponseClient(object):
     class FIELDS:
         USERNAME        = 'userName'
         PASSWORD        = 'password'
+        EMAIL           = 'email'
+        EMAIL_COLUMN    = 'emailCol'
+        MOBILE          = 'mobile'
+        MOBILE_COLUMN   = 'mobileCol'
         MESSAGE_ID      = 'messageId'
         MESSAGE_NAME    = 'messageName'
         BEAN_ID         = 'beanId'
@@ -78,6 +82,9 @@ class PureResponseClient(object):
         CUSTOM_DATA     = 'customData'
         UPLOAD_TYPE     = 'uploadTransactionType'
         PASTE_FILE      = 'pasteFile'
+        FIELD_PARTIAL   = 'field'
+        COLUMN_PARTIAL  = 'Col'
+        NAME_PARTIAL    = 'Name'
     
     class VALUES:
         APPEND                  = 'APPEND'
@@ -301,18 +308,32 @@ class PureResponseClient(object):
             PureResponseClient.ERRORS.GENERIC
           , self._response_data(response)
         )
-        return False
     
     def api_add_contact(self, list_name, contact):
-        entity_data = dict({
-            PureResponseClient.FIELDS.LIST_NAME : list_name
-          , PureResponseClient.FIELDS.UPLOAD_TYPE : PureResponseClient.VALUES.APPEND
-          , PureResponseClient.FIELDS.PASTE_FILE : self._dict_to_csv(contact)
-        }, **self._build_contact_entity(contact))
+        entity_data = {
+            PureResponseClient.FIELDS.LIST_NAME     : list_name
+          , PureResponseClient.FIELDS.UPLOAD_TYPE   : PureResponseClient.VALUES.APPEND
+          , PureResponseClient.FIELDS.PASTE_FILE    : self._dict_to_csv(contact)
+        }
+        
+        entity_data = dict(
+            entity_data
+          , **self._build_contact_entity(entity_data.get(PureResponseClient.FIELDS.PASTE_FILE))
+        )
         return self._api_append_contact_list(entity_data)
     
     def api_add_contacts(self, list_name, contacts):
-        return False
+        entity_data = {
+            PureResponseClient.FIELDS.LIST_NAME     : list_name
+          , PureResponseClient.FIELDS.UPLOAD_TYPE   : PureResponseClient.VALUES.APPEND
+          , PureResponseClient.FIELDS.PASTE_FILE    : self._dictlist_to_csv(contacts)
+        }
+        
+        entity_data = dict(
+            entity_data
+          , **self._build_contact_entity(entity_data.get(PureResponseClient.FIELDS.PASTE_FILE))
+        )
+        return self._api_append_contact_list(entity_data)
     
     # Direct access to PAINT. Other than converting to a dictionary
     # I will perform no error handling or wrapping
@@ -337,8 +358,6 @@ class PureResponseClient(object):
     
     def _response_data(self, response_dict, bean_type = None
         , bean_class = None, field = FIELDS.RESULT_DATA):
-        #print response_dict
-        #print bean_type
         if bean_type and bean_class:
             return response_dict[field][bean_type + '_' + bean_class]
         elif bean_type or bean_class:
@@ -409,8 +428,36 @@ class PureResponseClient(object):
                 dict_[key_] = getattr(val_, PureResponseClient.TYPES.KEYS.STRING)
         return dict_
     
-    def _write_csv(self):
-        return False
+    def _build_contact_entity(self, csv_string):
+        entity_data = dict()
+        count       = 0
+        custom      = 0
+        for key in csv_string.splitlines()[0].split(','):
+            if key is PureResponseClient.FIELDS.EMAIL:
+                entity_data[PureResponseClient.FIELDS.EMAIL_COLUMN] = count
+            elif key is PureResponseClient.FIELDS.MOBILE:
+                entity_data[PureResponseClient.FIELDS.MOBILE_COLUMN] = count
+            else:
+                field_whole = PureResponseClient.FIELDS.FIELD_PARTIAL + str(count)
+                entity_data[
+                    field_whole
+                  + PureResponseClient.FIELDS.COLUMN_PARTIAL
+                ] = count
+                entity_data[
+                    field_whole
+                  + PureResponseClient.FIELDS.NAME_PARTIAL
+                ] = key.replace(' ',  '_')
+                custom += 1
+                if custom is 10:
+                    break
+            count += 1
+        return entity_data
+    
+    def _fixtype_value(self, value):
+        if isinstance(value, str) or isinstance(value, unicode):
+            return value
+        else:
+            return str(value)
     
     def _dictlist_to_csv(self, list_):
         master = set()
@@ -421,19 +468,15 @@ class PureResponseClient(object):
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
         for item in list_:
-            csv_writer.writerow(dict([ (k, v.encode('utf-8')) for k, v in item.iteritems() ]))
+            csv_writer.writerow(dict(
+                [ (k, self._fixtype_value(v).encode('utf-8')) for k, v in item.iteritems() ]
+            ))
         output = csv_string.getvalue()
         csv_string.close()
         return output
         
     def _dict_to_csv(self, dict_):
-    ## MASTER LIST OF KEYS, LOOP THROUGH ONES AND UNION WITH NEW ARRAY OF KEYS, 
-    # THAT ARRAY MAY BE USED AS FIELDNAMES?
-        return False
-    
-    
-    
-    #s = dict([ (k,r) for k,r in mydict.iteritems() if r['x'] > 92 and r['x'] < 95 and r['y'] > 70 and r['y'] < 75 ])
+        return self._dictlist_to_csv([dict_])
     
     
     
