@@ -114,8 +114,8 @@ class PureResponseClient(object):
         self.api_client     = SudsPaint(api_version)
     
     def api_authenticate(self, api_username = '', api_password = ''):
-        self.api_username = api_username
-        self.api_password = api_password
+        self.api_username = api_username.encode('utf-8')
+        self.api_password = api_password.encode('utf-8')
         if (not api_username) or (not api_password):
             raise Exception(PureResponseClient.ERRORS.AUTH_PARAMS)
         
