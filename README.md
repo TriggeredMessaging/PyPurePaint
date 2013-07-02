@@ -1,7 +1,6 @@
 PyPurePaint
 ========
-PureResponseClient  
---------
+**PureResponseClient**  
 Python API wrapper for PureResponse PAINT by Pure360  
 For internal use and public release  
 
