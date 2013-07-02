@@ -110,17 +110,15 @@ class PureResponseClient(object):
         COULD_NOT_DELIVER   = 'ERROR_COULD_NOT_DELIVER'
         INVALID_PARAMS      = 'ERROR_INVALID_PARAMETERS'
     
-    def __init__(self, api_username = '', api_password = ''
-        , api_version = API.RPC_LITERAL_UNBRANDED):
-        
+    def __init__(self, api_version = API.RPC_LITERAL_UNBRANDED):
         self.api_client     = SudsPaint(api_version)
-        self.api_username   = api_username
-        self.api_password   = api_password
-        
+    
+    def api_authenticate(self, api_username = '', api_password = ''):
+        self.api_username = api_username
+        self.api_password = api_password
         if (not api_username) or (not api_password):
             raise Exception(PureResponseClient.ERRORS.AUTH_PARAMS)
-    
-    def api_authenticate(self):
+        
         auth = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CONTEXT
