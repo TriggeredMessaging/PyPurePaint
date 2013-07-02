@@ -352,7 +352,7 @@ class PureResponseClient(object):
         else:
             return self._dict_err(
                 PureResponseClient.ERRORS.NOT_AUTHENTICATED
-              , self._get_result(response)
+              , None
             )
     
     def _response_data(self, response_dict, bean_type = None
