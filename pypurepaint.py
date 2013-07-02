@@ -275,7 +275,7 @@ class PureResponseClient(object):
                 )
         return self._dict_err(
             PureResponseClient.ERRORS.GENERIC
-          , self._response_data(response)
+          , self._response_data(create)
         )
     
     def _api_append_contact_list(self, entity_data):
@@ -306,7 +306,7 @@ class PureResponseClient(object):
                 )
         return self._dict_err(
             PureResponseClient.ERRORS.GENERIC
-          , self._response_data(response)
+          , self._response_data(create)
         )
     
     def _api_add_contact_ambiguous(self, list_name, contact_data):
@@ -350,13 +350,16 @@ class PureResponseClient(object):
             else:
                 return self._ptarr_to_dict(response)
         else:
-            return PureResponseClient.ERRORS.NOT_AUTHENTICATED
+            return self._dict_err(
+                PureResponseClient.ERRORS.NOT_AUTHENTICATED
+              , self._get_result(response)
+            )
     
     def _response_data(self, response_dict, bean_type = None
         , bean_class = None, field = FIELDS.RESULT_DATA):
-        if bean_type and bean_class:
+        if (bean_type is not None) and (bean_class is not None):
             return response_dict[field][bean_type + '_' + bean_class]
-        elif bean_type or bean_class:
+        elif (bean_type is not None) or (bean_class is not None):
             raise Exception(PureResponseClient.ERRORS.INVALID_PARAMS)
         else:
             return response_dict[field]
