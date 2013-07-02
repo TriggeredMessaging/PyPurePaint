@@ -6,7 +6,7 @@
 from distutils.core import setup
 
 setup(
-    name        = 'PyPurePaint',
-    version     = '1.0',
-    py_modules  = ['pypurepaint'],
+    name        = 'PyPurePaint'
+  , version     = '1.0'
+  , py_modules  = ['pypurepaint']
 )
