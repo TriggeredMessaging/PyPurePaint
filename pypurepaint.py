@@ -114,6 +114,14 @@ class PureResponseClient(object):
         self.api_client     = SudsPaint(api_version)
     
     def api_authenticate(self, api_username = '', api_password = ''):
+        """
+        Authenticate to receive a context key for use in API requests.
+        Worth noting that there may be unexpected behaviour for special 
+        characters, it is unclear how these should be handled.
+        ----------------------------------------------
+        @param api_username     - username.
+        @param api_password     - password.
+        """
         self.api_username = api_username.encode('utf-8')
         self.api_password = api_password.encode('utf-8')
         if (not api_username) or (not api_password):
@@ -151,6 +159,15 @@ class PureResponseClient(object):
     
     def api_send_to_list(self, list_name, message_name, scheduling_delay = {
         VALUES.SCHEDULING_UNIT : VALUES.SCHEDULING_DELAY}):
+        """
+        Bulk send for email campaign to a contact list.
+        ----------------------------------------------
+        @param list_name        - name of a contact list in the system.
+        @param message_name     - name of an email in the system.
+        @param scheduling_delay - [optional] define how long the system 
+                                  should wait before sending the campaign, 
+                                  defaults to 3 minutes.
+        """
         create = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
@@ -237,6 +254,16 @@ class PureResponseClient(object):
             )
     
     def api_send_to_contact(self, email_to, message_name, custom_data = None):
+        """
+        Send one to one email message.
+        ----------------------------------------------
+        @param email_to         - email address of intended recipient
+        @param message_name     - name of email message in the system
+        @param custom_data      - any desired merge tags, should match 
+                                  fully with ones defined in the email 
+                                  unless default values are available 
+                                  in the contact list
+        """
         process_data = {PureResponseClient.FIELDS.MSG_MSG_NAME : message_name}
         entity_data = {PureResponseClient.FIELDS.TO_ADDRESS : email_to}
         if custom_data is not None:
@@ -279,6 +306,16 @@ class PureResponseClient(object):
         )
     
     def _api_append_contact_list(self, entity_data):
+        """
+        Internal use.
+        Abstraction layer between built entity data 
+        (self._api_add_contact_ambiguous) and sending 
+        request (self.api_make_request).
+        ----------------------------------------------
+        @param entity_data      - information about the contacts 
+                                  to append as well as general query 
+                                  information
+        """
         create = self.api_make_request(
             PureResponseClient.BEAN_TYPES.FACADE
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
@@ -310,6 +347,16 @@ class PureResponseClient(object):
         )
     
     def _api_add_contact_ambiguous(self, list_name, contact_data):
+        """
+        Internal use.
+        Abstraction layer between publically exposed functions 
+        (self.api_add_contact, self.api_add_contacts) and request 
+        handling (self._api_append_contact_list).
+        ----------------------------------------------
+        @param list_name        - name of contact list to append to.
+        @param contact_data     - dictionary or list of dictionaries 
+                                  containing contact data to append.
+        """
         entity_data = {
             PureResponseClient.FIELDS.LIST_NAME     : list_name
           , PureResponseClient.FIELDS.UPLOAD_TYPE   : PureResponseClient.VALUES.APPEND
@@ -329,9 +376,25 @@ class PureResponseClient(object):
         return self._api_append_contact_list(entity_data)
         
     def api_add_contact(self, list_name, contact):
+        """
+        Add single contact to a given contact list.
+        ----------------------------------------------
+        @param list_name        - name of contact list to append to
+        @param contact          - dictionary of contact data
+        """
         return self._api_add_contact_ambiguous(list_name, contact)
     
     def api_add_contacts(self, list_name, contacts):
+        """
+        Add multiple contacts to a given contact list.
+        The contacts parameter should be a list of dictionaries. 
+        The dictionaries do not require matching key sets as a 
+        master-list of keys is generated in the process of 
+        producing a csv to upload.
+        ----------------------------------------------
+        @param list_name        - name of contact list to append to
+        @param contacts         - list of dictionaries
+        """
         return self._api_add_contact_ambiguous(list_name, contacts)
     
     def api_make_request(self, bean_type, bean_class, bean_process
@@ -407,6 +470,16 @@ class PureResponseClient(object):
             return False
     
     def _dict_to_ptarr(self, dict_):
+        """
+        Internal use.
+        Convert dictionaries to 'paintArray' objects using suds.
+        Works some encoding magic in the process in order to be 
+        compliant with the expectations and requirements of the 
+        API while attempting to maintain the integrity of the 
+        data content.
+        ----------------------------------------------
+        @param dict_        - dictionary of data to convert.
+        """
         if not dict_:
             return suds.null()
         arr_ = self.api_client.factory.create(PureResponseClient.TYPES.ARRAY)
@@ -435,6 +508,12 @@ class PureResponseClient(object):
         return arr_
     
     def _ptarr_to_dict(self, ptarr):
+        """
+        Internal use.
+        Convert 'paintArray' objects to dictionaries.
+        ----------------------------------------------
+        @param ptarr        - 'paintArray' to convert.
+        """
         dict_ = {}
         if not hasattr(ptarr, PureResponseClient.TYPES.KEYS.PAIRS):
             return None
@@ -452,6 +531,12 @@ class PureResponseClient(object):
         return dict_
     
     def _build_contact_entity(self, csv_string):
+        """
+        Internal use.
+        Builds fields necessary to supply csv data to the API.
+        ----------------------------------------------
+        @param csv_string       - csv data to build fields for.
+        """
         entity_data = dict()
         count       = 0
         custom      = 0
@@ -485,6 +570,14 @@ class PureResponseClient(object):
             return str(value)
     
     def _dictlist_to_csv(self, list_):
+        """
+        Internal use.
+        Convert list of dictionaries into csv data.
+        The dictionaries may non-matching keys as a 
+        master-list of keys will be built in the process.
+        ----------------------------------------------
+        @param list_        - list of dictionaries to convert.
+        """
         master = set()
         for row in list_:
             master = master.union(row.keys())
@@ -501,6 +594,13 @@ class PureResponseClient(object):
         return output
         
     def _dict_to_csv(self, dict_):
+        """
+        Internal use.
+        Convert dictionary into csv data.
+        Simple proxy to self._dictlist_to_csv.
+        ----------------------------------------------
+        @param dict_        - dictionary to convert.
+        """
         return self._dictlist_to_csv([dict_])
     
     
