@@ -460,6 +460,7 @@ class PureResponseClient(object):
         exceptions = [
             PureResponseClient.FIELDS.BEAN_ID
           , PureResponseClient.FIELDS.MESSAGE_ID
+          , PureResponseClient.FIELDS.LIST_ID
         ]
         if key.isdigit():
             return True
@@ -491,7 +492,7 @@ class PureResponseClient(object):
                 setattr(val_, PureResponseClient.TYPES.KEYS.ARRAY, self._dict_to_ptarr(dict_[key_]))
             elif (isinstance(dict_[key_], str) or 
                 (isinstance(dict_[key_], unicode) and self._unicode_exceptions(key_))):
-                setattr(val_, PureResponseClient.TYPES.KEYS.STRING, dict_[key_])
+                setattr(val_, PureResponseClient.TYPES.KEYS.STRING, dict_[key_].encode('utf-8'))
             elif isinstance(dict_[key_], unicode):
                 setattr(val_, PureResponseClient.TYPES.KEYS.STRING, base64.b64encode(
                     dict_[key_].encode('utf-8')
