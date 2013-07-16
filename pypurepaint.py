@@ -68,6 +68,7 @@ class PureResponseClient(object):
         EMAIL_COLUMN    = 'emailCol'
         MOBILE          = 'mobile'
         MOBILE_COLUMN   = 'mobileCol'
+        DUMMY_COLUMN    = 'PAINT_DUMMY_COLUMN'
         MESSAGE_ID      = 'messageId'
         MESSAGE_NAME    = 'messageName'
         BEAN_ID         = 'beanId'
@@ -583,6 +584,7 @@ class PureResponseClient(object):
         for row in list_:
             master = master.union(row.keys())
         master = sorted(list(master))
+        master.insert(0, PureResponseClient.FIELDS.DUMMY_COLUMN) # fix issue: first column removal
         csv_string = StringIO.StringIO()
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
