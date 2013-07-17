@@ -64,32 +64,33 @@ class PureResponseClient(object):
         SEARCH  = 'bus_search'
     
     class FIELDS:
-        USERNAME            = 'userName'
-        PASSWORD            = 'password'
-        EMAIL               = 'email'
-        EMAIL_COLUMN        = 'emailCol'
-        MOBILE              = 'mobile'
-        MOBILE_COLUMN       = 'mobileCol'
-        MESSAGE_ID          = 'messageId'
-        MESSAGE_NAME        = 'messageName'
-        BEAN_ID             = 'beanId'
-        LIST_IDS            = 'listIds'
-        LIST_ID             = 'listId'
-        LIST_NAME           = 'listName'
-        DELIVERY_TIME       = 'deliveryDtTm'
-        FOUND_DATA          = 'idData'
-        RESULT              = 'result'
-        RESULT_DATA         = 'resultData'
-        MSG_MSG_NAME        = 'message_messageName'
-        TO_ADDRESS          = 'toAddress'
-        CUSTOM_DATA         = 'customData'
-        UPLOAD_TYPE         = 'uploadTransactionType'
-        UPLOAD_NOTIFY_URI   = 'uploadFileNotifyEmail'
-        PASTE_FILE          = 'pasteFile'
-        FIELD_PARTIAL       = 'field'
-        COLUMN_PARTIAL      = 'Col'
-        NAME_PARTIAL        = 'Name'
-        BASE64_PARTIAL      = '_base64'
+        USERNAME        = 'userName'
+        PASSWORD        = 'password'
+        EMAIL           = 'email'
+        EMAIL_COLUMN    = 'emailCol'
+        MOBILE          = 'mobile'
+        MOBILE_COLUMN   = 'mobileCol'
+        DUMMY_COLUMN    = 'PAINT_DUMMY_COLUMN'
+        MESSAGE_ID      = 'messageId'
+        MESSAGE_NAME    = 'messageName'
+        BEAN_ID         = 'beanId'
+        LIST_IDS        = 'listIds'
+        LIST_ID         = 'listId'
+        LIST_NAME       = 'listName'
+        DELIVERY_TIME   = 'deliveryDtTm'
+        FOUND_DATA      = 'idData'
+        RESULT          = 'result'
+        RESULT_DATA     = 'resultData'
+        MSG_MSG_NAME    = 'message_messageName'
+        TO_ADDRESS      = 'toAddress'
+        CUSTOM_DATA     = 'customData'
+        UPLOAD_TYPE     = 'uploadTransactionType'
+		UPLOAD_NOTIFY_URI   = 'uploadFileNotifyEmail'
+        PASTE_FILE      = 'pasteFile'
+        FIELD_PARTIAL   = 'field'
+        COLUMN_PARTIAL  = 'Col'
+        NAME_PARTIAL    = 'Name'
+        BASE64_PARTIAL  = '_base64'
     
     class VALUES:
         APPEND                  = 'APPEND'
@@ -492,6 +493,7 @@ class PureResponseClient(object):
             paste_file = self._dictlist_to_csv(contact_data)
         else:
             paste_file = self._dict_to_csv(contact_data)
+		
         entity_data[
             PureResponseClient.FIELDS.PASTE_FILE
           + PureResponseClient.FIELDS.BASE64_PARTIAL
@@ -500,8 +502,6 @@ class PureResponseClient(object):
             entity_data
           , **self._build_contact_entity(paste_file)
         )
-        print paste_file
-        print self._dict_to_ptarr(entity_data)
         return self._api_append_contact_list(entity_data)
         
     def api_add_contact(self, list_name, contact):
@@ -550,8 +550,6 @@ class PureResponseClient(object):
     def _response_data(self, response_dict, bean_type = None
         , bean_class = None, field = FIELDS.RESULT_DATA):
         if (bean_type is not None) and (bean_class is not None):
-            #print field, bean_type, bean_class
-            #print response_dict
             return response_dict[field][bean_type + '_' + bean_class]
         elif (bean_type is not None) or (bean_class is not None):
             raise Exception(PureResponseClient.ERRORS.INVALID_PARAMS)
@@ -714,6 +712,7 @@ class PureResponseClient(object):
         for row in list_:
             master = master.union(row.keys())
         master = sorted(list(master))
+        master.insert(0, PureResponseClient.FIELDS.DUMMY_COLUMN) # fix issue: first column removal
         csv_string = StringIO.StringIO()
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
