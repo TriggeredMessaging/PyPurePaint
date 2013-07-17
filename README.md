@@ -11,9 +11,8 @@ Authored by Mikael Kohlmyr
 [Triggered Messaging](http://triggeredmessaging.com)
 
 ========
-**Examples**
-Create a new contact list.  
-Will generate a contact list from a set of dictionaries.  
+**Create a new contact list.**  
+Will generate a contact list from a set of dictionaries.
 ```python
 from pypurepaint import PureResponseClient as Pure
 pure = Pure()
@@ -25,8 +24,8 @@ pure.api\_create\_contact\_list('new\_list\_name', [{
 pure.api_invalidate()
 ```
 
-Send a one-to-one message.  
-Optionally supply custom merge fields for the recipient as a third parameter.  
+**Send a one-to-one message.**  
+Optionally supply custom merge fields for the recipient as a third parameter.
 ```python
 from pypurepaint import PureResponseClient as Pure
 pure = Pure()
