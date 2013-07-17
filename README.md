@@ -17,7 +17,7 @@ Will generate a contact list from a set of dictionaries.
 from pypurepaint import PureResponseClient as Pure
 pure = Pure()
 pure.api_authenticate('username', 'password')
-pure.api\_create\_contact\_list('new\_list\_name', [{
+pure.api_create_contact_list('new_list_name', [{
     'email' : 'blackhole@example.none'
   , 'name'  : 'John Doe'
 }])
@@ -30,6 +30,6 @@ Optionally supply custom merge fields for the recipient as a third parameter.
 from pypurepaint import PureResponseClient as Pure
 pure = Pure()
 pure.api_authenticate('username', 'password')
-pure.api\_send\_to\_contact('blackhole@example.none', 'example\_message\_name')
+pure.api_send_to_contact('blackhole@example.none', 'example_message_name')
 pure.api_invalidate()
 ```
