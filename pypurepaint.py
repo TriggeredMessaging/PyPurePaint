@@ -46,6 +46,8 @@ class PureResponseClient(object):
         SEARCH          = 'search'
         STORE           = 'store'
         CREATE          = 'create'
+        LOAD            = 'load'
+        REMOVE          = 'remove'
         AUTHENTICATE    = 'login'
         INVALIDATE      = 'logout'
     
@@ -62,31 +64,33 @@ class PureResponseClient(object):
         SEARCH  = 'bus_search'
     
     class FIELDS:
-        USERNAME        = 'userName'
-        PASSWORD        = 'password'
-        EMAIL           = 'email'
-        EMAIL_COLUMN    = 'emailCol'
-        MOBILE          = 'mobile'
-        MOBILE_COLUMN   = 'mobileCol'
-        MESSAGE_ID      = 'messageId'
-        MESSAGE_NAME    = 'messageName'
-        BEAN_ID         = 'beanId'
-        LIST_IDS        = 'listIds'
-        LIST_ID         = 'listId'
-        LIST_NAME       = 'listName'
-        DELIVERY_TIME   = 'deliveryDtTm'
-        FOUND_DATA      = 'idData'
-        RESULT          = 'result'
-        RESULT_DATA     = 'resultData'
-        MSG_MSG_NAME    = 'message_messageName'
-        TO_ADDRESS      = 'toAddress'
-        CUSTOM_DATA     = 'customData'
-        UPLOAD_TYPE     = 'uploadTransactionType'
-        PASTE_FILE      = 'pasteFile'
-        FIELD_PARTIAL   = 'field'
-        COLUMN_PARTIAL  = 'Col'
-        NAME_PARTIAL    = 'Name'
-        BASE64_PARTIAL  = '_base64'
+        USERNAME            = 'userName'
+        PASSWORD            = 'password'
+        EMAIL               = 'email'
+        EMAIL_COLUMN        = 'emailCol'
+        MOBILE              = 'mobile'
+        MOBILE_COLUMN       = 'mobileCol'
+        DUMMY_COLUMN        = 'PAINT_DUMMY_COLUMN'
+        MESSAGE_ID          = 'messageId'
+        MESSAGE_NAME        = 'messageName'
+        BEAN_ID             = 'beanId'
+        LIST_IDS            = 'listIds'
+        LIST_ID             = 'listId'
+        LIST_NAME           = 'listName'
+        DELIVERY_TIME       = 'deliveryDtTm'
+        FOUND_DATA          = 'idData'
+        RESULT              = 'result'
+        RESULT_DATA         = 'resultData'
+        MSG_MSG_NAME        = 'message_messageName'
+        TO_ADDRESS          = 'toAddress'
+        CUSTOM_DATA         = 'customData'
+        UPLOAD_TYPE         = 'uploadTransactionType'
+        UPLOAD_NOTIFY_URI   = 'uploadFileNotifyEmail'
+        PASTE_FILE          = 'pasteFile'
+        FIELD_PARTIAL       = 'field'
+        COLUMN_PARTIAL      = 'Col'
+        NAME_PARTIAL        = 'Name'
+        BASE64_PARTIAL      = '_base64'
     
     class VALUES:
         APPEND                  = 'APPEND'
@@ -102,8 +106,10 @@ class PureResponseClient(object):
         NOT_AUTHENTICATED   = 'ERROR_NOT_AUTHENTICATED'
         AUTH_PARAMS         = 'ERROR_AUTHENTICATION_PARAMETERS'
         AUTH_PROCESS        = 'ERROR_AUTHENTICATION_PROCESS'
+        LIST_NAME_EXISTS    = 'ERROR_LIST_NAME_EXISTS'
         LIST_NOT_FOUND      = 'ERROR_LIST_NOT_FOUND'
         LIST_NOT_SAVED      = 'ERROR_LIST_NOT_SAVED'
+        LIST_NOT_REMOVED    = 'ERROR_LIST_NOT_REMOVED'
         CONTACT_NOT_FOUND   = 'ERROR_CONTACT_NOT_FOUND'
         CAMPAIGN_NOT_FOUND  = 'ERROR_CAMPAIGN_NOT_FOUND'
         BEAN_NOT_CREATED    = 'ERROR_BEAN_NOT_CREATED'
@@ -305,6 +311,165 @@ class PureResponseClient(object):
           , self._response_data(create)
         )
     
+    
+    def api_create_contact_list(self, list_name, list_data
+        , notify_uri = None, overwrite_existing = False):
+        """
+        Create a new contact list.
+        Uses internal helpers to achieve this in accordance 
+        with supplied arguments.
+        ----------------------------------------------
+        @param list_name            - name of the contact list
+        @param list_data            - list of dictionaries of records
+                                      to be entered into the list as 
+                                      initial data. Must be non-empty.
+        @param notify_uri           - Uri which recieves notifications 
+                                      when changes are made to the list.
+                                      e.g. blackhole@example.none
+        @param overwrite_existing   - Boolean describing the action to 
+                                      be taken if a list by the given name 
+                                      already exists.
+        """
+        search_response = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+          , PureResponseClient.BEAN_PROCESSES.SEARCH
+          , {PureResponseClient.FIELDS.LIST_NAME : list_name}
+        )
+        if self._result_success(search_response):
+            found = self._get_found_data(
+                search_response
+              , PureResponseClient.BEAN_TYPES.SEARCH
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+            )
+            if len(found) is 0:
+                return self._api_new_contact_list_helper(list_name, list_data, notify_uri)
+            elif overwrite_existing:
+                remove_response = self._api_remove_contact_list_helper(list_name, found)
+                if self._result_success(remove_response):
+                    return self._api_new_contact_list_helper(list_name, list_data, notify_uri)
+                else:
+                    return remove_response
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.LIST_NAME_EXISTS
+                  , self._response_data(search_response)
+                )
+        else:
+            return self._dict_err(
+                PureResponseClient.ERRORS.GENERIC
+              , self._response_data(search_response)
+            )
+    
+    def _api_new_contact_list_helper(self, list_name, list_data, notify_uri):
+        """
+        Internal use.
+        Re-usable helper which does the actual creation of the 
+        new list.
+        ----------------------------------------------
+        @param list_name    - name of the contact list
+        @param list_data    - list of dictionaries of records
+                              to be entered into the list as 
+                              initial data. Must be non-empty.
+        @param notify_uri   - Uri which recieves notifications 
+                              when changes are made to the list.
+                              e.g. blackhole@example.none
+        """
+        create = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+          , PureResponseClient.BEAN_PROCESSES.CREATE
+        )
+        if self._result_success(create):
+            entity_data = {
+                PureResponseClient.FIELDS.UPLOAD_NOTIFY_URI : notify_uri
+              , PureResponseClient.FIELDS.LIST_NAME         : list_name
+              , PureResponseClient.FIELDS.BEAN_ID           : self._get_bean_id(
+                    create
+                  , PureResponseClient.BEAN_TYPES.ENTITY
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+                )
+            }
+            
+            paste_file = self._dictlist_to_csv(list_data)
+            entity_data[
+                PureResponseClient.FIELDS.PASTE_FILE
+              + PureResponseClient.FIELDS.BASE64_PARTIAL
+            ] = base64.b64encode(paste_file)
+            
+            entity_data = dict(
+                entity_data
+              , **self._build_contact_entity(
+                    paste_file
+                )
+            )
+            response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+              , PureResponseClient.BEAN_PROCESSES.STORE
+              , entity_data
+            )
+            if self._result_success(response):
+                return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.LIST_NOT_SAVED
+                  , self._response_data(response)
+                )
+        return self._dict_err(
+            PureResponseClient.ERRORS.BEAN_NOT_CREATED
+          , self._response_data(search_response)
+        )
+    
+    def _api_remove_contact_list_helper(self, list_name, found):
+        """
+        Remove existing list by same name.
+        From a list of found beans, load them and compare their 
+        names to the supplied list_name. If the names are the 
+        same make a call to remove the existing bean.
+        ----------------------------------------------
+        @param list_name    - Name of the list to overwrite
+        @param found        - Set of lists where list_name was a 
+                              (potentially improper) subset of the 
+                              name of the list. If equal (improper) 
+                              this list will be removed.
+        """
+        for key in found:
+            entity_data = found[key]
+            load_response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+              , PureResponseClient.BEAN_PROCESSES.LOAD
+              , entity_data
+            )
+            
+            if not self._result_success(load_response):
+                continue
+            
+            load_output = self._response_data(
+                load_response
+              , PureResponseClient.BEAN_TYPES.ENTITY
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+            )
+            
+            if (unicode(load_output.get(PureResponseClient.FIELDS.LIST_NAME)) == unicode(list_name)):
+                entity_data = {
+                    PureResponseClient.FIELDS.BEAN_ID : load_output[
+                        PureResponseClient.FIELDS.BEAN_ID
+                    ]
+                }
+                
+                return self.api_make_request(
+                    PureResponseClient.BEAN_TYPES.FACADE
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+                  , PureResponseClient.BEAN_PROCESSES.REMOVE
+                  , entity_data
+                )
+        return self._dict_err(
+            PureResponseClient.ERRORS.LIST_NOT_FOUND
+          , found
+        )
+    
     def _api_append_contact_list(self, entity_data):
         """
         Internal use.
@@ -365,10 +530,11 @@ class PureResponseClient(object):
             paste_file = self._dictlist_to_csv(contact_data)
         else:
             paste_file = self._dict_to_csv(contact_data)
-        entity_data[PureResponseClient.FIELDS.PASTE_FILE
-            + PureResponseClient.FIELDS.BASE64_PARTIAL] = base64.b64encode(
-            paste_file
-        )
+		
+        entity_data[
+            PureResponseClient.FIELDS.PASTE_FILE
+          + PureResponseClient.FIELDS.BASE64_PARTIAL
+        ] = base64.b64encode(paste_file)
         entity_data = dict(
             entity_data
           , **self._build_contact_entity(paste_file)
@@ -450,10 +616,10 @@ class PureResponseClient(object):
     def _result_exception(self, response, exception):
         return self._get_result(response) is exception
     
-    def _dict_ok(self, result):
+    def _dict_ok(self, result = VALUES.SUCCESS):
         return {'ok' : True, 'result': result}
     
-    def _dict_err(self, error, meta):
+    def _dict_err(self, error = ERRORS.GENERIC, meta = None):
         return {'ok' : False, 'result' : error, 'meta' : meta}
     
     def _unicode_exceptions(self, key):
@@ -583,6 +749,7 @@ class PureResponseClient(object):
         for row in list_:
             master = master.union(row.keys())
         master = sorted(list(master))
+        master.insert(0, PureResponseClient.FIELDS.DUMMY_COLUMN) # fix issue: first column removal
         csv_string = StringIO.StringIO()
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
