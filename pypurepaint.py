@@ -26,9 +26,7 @@ class PureResponseClient(object):
     api_client      = None
     
     class API:
-        RPC_ENCODED_BRANDED     = 'http://paint.pure360.com/paint.pure360.com/ctrlPaint.wsdl'
         RPC_LITERAL_BRANDED     = 'http://paint.pure360.com/paint.pure360.com/ctrlPaintLiteral.wsdl'
-        RPC_ENCODED_UNBRANDED   = 'http://emailapi.co.uk/emailapi.co.uk/ctrlPaint.wsdl'
         RPC_LITERAL_UNBRANDED   = 'http://emailapi.co.uk/emailapi.co.uk/ctrlPaintLiteral.wsdl'
     
     class TYPES:
@@ -96,6 +94,9 @@ class PureResponseClient(object):
         APPEND                  = 'APPEND'
         SUCCESS                 = 'success'
         SCHEDULING_UNIT         = 'minutes'
+        ACCOUNT_LEVEL_LITE     = 10
+        ACCOUNT_LEVEL_PRO      = 20
+        ACCOUNT_LEVEL_EXPERT   = 40
         SCHEDULING_DELAY        = 3
     
     class EXCEPTIONS:
@@ -119,7 +120,7 @@ class PureResponseClient(object):
     def __init__(self, api_version = API.RPC_LITERAL_UNBRANDED):
         self.api_client     = SudsPaint(api_version)
     
-    def api_authenticate(self, api_username = '', api_password = ''):
+    def api_authenticate(self, api_username = '', api_password = '', api_account_level = VALUES.ACCOUNT_LEVEL_LITE):
         """
         Authenticate to receive a context key for use in API requests.
         Worth noting that there may be unexpected behaviour for special 
@@ -128,8 +129,9 @@ class PureResponseClient(object):
         @param api_username     - username.
         @param api_password     - password.
         """
-        self.api_username = api_username.encode('utf-8')
-        self.api_password = api_password.encode('utf-8')
+        self.api_username       = api_username.encode('utf-8')
+        self.api_password       = api_password.encode('utf-8')
+        self.api_account_level  = api_account_level
         if (not api_username) or (not api_password):
             raise Exception(PureResponseClient.ERRORS.AUTH_PARAMS)
         
@@ -179,84 +181,92 @@ class PureResponseClient(object):
           , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
           , PureResponseClient.BEAN_PROCESSES.CREATE
         )
-        delivery_input = {
-            PureResponseClient.FIELDS.BEAN_ID : self._get_bean_id(
-                create
-              , PureResponseClient.BEAN_TYPES.ENTITY
-              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
-            )
-        }
-        search_response = self.api_make_request(
-            PureResponseClient.BEAN_TYPES.FACADE
-          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
-          , PureResponseClient.BEAN_PROCESSES.SEARCH
-          , {PureResponseClient.FIELDS.LIST_NAME : list_name}
-        )
-        if self._result_success(search_response):
-            found = self._get_found_data(
-                search_response
-              , PureResponseClient.BEAN_TYPES.SEARCH
+        if self._result_success(create):
+            delivery_input = {
+                PureResponseClient.FIELDS.BEAN_ID : self._get_bean_id(
+                    create
+                  , PureResponseClient.BEAN_TYPES.ENTITY
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
+                )
+            }
+            search_response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+              , PureResponseClient.BEAN_PROCESSES.SEARCH
+              , {PureResponseClient.FIELDS.LIST_NAME : list_name}
             )
-            if len(found) is not 0:
-                delivery_input[PureResponseClient.FIELDS.LIST_IDS] = {
-                    '0': found['0'].get(PureResponseClient.FIELDS.LIST_ID)
-                }
+            if self._result_success(search_response):
+                found = self._get_found_data(
+                    search_response
+                  , PureResponseClient.BEAN_TYPES.SEARCH
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+                )
+                if len(found) is not 0:
+                    delivery_input[PureResponseClient.FIELDS.LIST_IDS] = {
+                        '0': found['0'].get(PureResponseClient.FIELDS.LIST_ID)
+                    }
+                else:
+                    return self._dict_err(
+                        PureResponseClient.ERRORS.ERROR_CAMPAIGN_NOT_FOUND
+                      , self._response_data(search_response)
+                    )
             else:
                 return self._dict_err(
-                    PureResponseClient.ERRORS.ERROR_CAMPAIGN_NOT_FOUND
+                    PureResponseClient.ERRORS.GENERIC
                   , self._response_data(search_response)
                 )
-        else:
-            return self._dict_err(
-                PureResponseClient.ERRORS.GENERIC
-              , self._response_data(search_response)
-            )
-        
-        search_response = self.api_make_request(
-            PureResponseClient.BEAN_TYPES.FACADE
-          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
-          , PureResponseClient.BEAN_PROCESSES.SEARCH
-          , {PureResponseClient.FIELDS.MESSAGE_NAME : message_name}
-        )
-        
-        if self._result_success(search_response):
-            found = self._get_found_data(
-                search_response
-              , PureResponseClient.BEAN_TYPES.SEARCH
+            
+            search_response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+              , PureResponseClient.BEAN_PROCESSES.SEARCH
+              , {PureResponseClient.FIELDS.MESSAGE_NAME : message_name}
             )
-            if len(found) is 1:
-                delivery_input[
-                    PureResponseClient.FIELDS.MESSAGE_ID
-                ] = found['0'].get(PureResponseClient.FIELDS.MESSAGE_ID)
+            
+            if self._result_success(search_response):
+                found = self._get_found_data(
+                    search_response
+                  , PureResponseClient.BEAN_TYPES.SEARCH
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+                )
+                if len(found) is 1:
+                    delivery_input[
+                        PureResponseClient.FIELDS.MESSAGE_ID
+                    ] = found['0'].get(PureResponseClient.FIELDS.MESSAGE_ID)
+                else:
+                    return self._dict_err(
+                        PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
+                      , self._response_data(search_response)
+                    )
             else:
                 return self._dict_err(
-                    PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
+                    PureResponseClient.ERRORS.GENERIC
                   , self._response_data(search_response)
                 )
+            schedule_time = datetime.datetime.now() + datetime.timedelta(**scheduling_delay)
+            schedule_time = schedule_time.strftime('%d/%m/%Y %H:%M')
+            delivery_input[PureResponseClient.FIELDS.DELIVERY_TIME] = schedule_time
+            
+            response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
+              , PureResponseClient.BEAN_PROCESSES.STORE
+              , delivery_input
+            )
+            
+            if self._result_success(response):
+                return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.COULD_NOT_DELIVER
+                  , self._response_data(response)
+                )
+        elif create.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+            return create
         else:
             return self._dict_err(
                 PureResponseClient.ERRORS.GENERIC
-              , self._response_data(search_response)
-            )
-        schedule_time = datetime.datetime.now() + datetime.timedelta(**scheduling_delay)
-        schedule_time = schedule_time.strftime('%d/%m/%Y %H:%M')
-        delivery_input[PureResponseClient.FIELDS.DELIVERY_TIME] = schedule_time
-        
-        response = self.api_make_request(
-            PureResponseClient.BEAN_TYPES.FACADE
-          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_DELIVERY
-          , PureResponseClient.BEAN_PROCESSES.STORE
-          , delivery_input
-        )
-        
-        if self._result_success(response):
-            return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
-        else:
-            return self._dict_err(
-                PureResponseClient.ERRORS.COULD_NOT_DELIVER
-              , self._response_data(response)
+              , self._response_data(create)
             )
     
     def api_send_to_contact(self, email_to, message_name, custom_data = None):
@@ -306,10 +316,13 @@ class PureResponseClient(object):
                     PureResponseClient.ERRORS.COULD_NOT_DELIVER
                   , self._response_data(response)
                 )
-        return self._dict_err(
-            PureResponseClient.ERRORS.GENERIC
-          , self._response_data(create)
-        )
+        elif create.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+            return create
+        else:
+            return self._dict_err(
+                PureResponseClient.ERRORS.GENERIC
+              , self._response_data(create)
+            )
     
     
     def api_create_contact_list(self, list_name, list_data
@@ -355,6 +368,8 @@ class PureResponseClient(object):
                     PureResponseClient.ERRORS.LIST_NAME_EXISTS
                   , self._response_data(search_response)
                 )
+        elif search_response.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+            return search_response
         else:
             return self._dict_err(
                 PureResponseClient.ERRORS.GENERIC
@@ -506,10 +521,13 @@ class PureResponseClient(object):
                     PureResponseClient.ERRORS.LIST_NOT_SAVED
                   , self._response_data(response)
                 )
-        return self._dict_err(
-            PureResponseClient.ERRORS.GENERIC
-          , self._response_data(create)
-        )
+        elif create.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+            return create
+        else:
+            return self._dict_err(
+                PureResponseClient.ERRORS.GENERIC
+              , self._response_data(create)
+            )
     
     def _api_add_contact_ambiguous(self, list_name, contact_data):
         """
@@ -725,7 +743,7 @@ class PureResponseClient(object):
                   + PureResponseClient.FIELDS.NAME_PARTIAL
                 ] = key.replace(' ',  '_')
                 custom += 1
-                if custom is 10:
+                if custom is self.api_account_level:
                     break
             count += 1
         return entity_data
@@ -749,7 +767,7 @@ class PureResponseClient(object):
         for row in list_:
             master = master.union(row.keys())
         master = sorted(list(master))
-        master.insert(0, PureResponseClient.FIELDS.DUMMY_COLUMN) # fix issue: first column removal
+        master.insert(0, PureResponseClient.FIELDS.DUMMY_COLUMN) # fix: first column removal
         csv_string = StringIO.StringIO()
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
