@@ -8,7 +8,7 @@ For internal use and public release
 Copyright (c) 2013 Triggered Messaging Ltd  
 Authored by Mikael Kohlmyr  
 
-[Triggered Messaging](http://triggeredmessaging.com), 
+[Triggered Messaging](http://triggeredmessaging.com),  
 [Pure360](http://www.pure360.com/)
 
 ========
