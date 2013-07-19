@@ -126,8 +126,11 @@ class PureResponseClient(object):
         Worth noting that there may be unexpected behaviour for special 
         characters, it is unclear how these should be handled.
         ----------------------------------------------
-        @param api_username     - username.
-        @param api_password     - password.
+        @param api_username         - username.
+        @param api_password         - password.
+        @param api_account_level    - account level, lite / pro / expert
+                                      determines the number of custom fields 
+                                      that can be used.
         """
         self.api_username       = api_username.encode('utf-8')
         self.api_password       = api_password.encode('utf-8')
