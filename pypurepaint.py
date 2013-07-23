@@ -516,7 +516,6 @@ class PureResponseClient(object):
               , PureResponseClient.BEAN_PROCESSES.STORE
               , entity_data
             )
-            
             if self._result_success(response):
                 return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
             else:
@@ -565,6 +564,7 @@ class PureResponseClient(object):
     def api_add_contact(self, list_name, contact):
         """
         Add single contact to a given contact list.
+        Alias for _api_add_contact_ambiguous.
         ----------------------------------------------
         @param list_name        - name of contact list to append to
         @param contact          - dictionary of contact data
@@ -574,6 +574,7 @@ class PureResponseClient(object):
     def api_add_contacts(self, list_name, contacts):
         """
         Add multiple contacts to a given contact list.
+        Alias for _api_add_contact_ambiguous.
         The contacts parameter should be a list of dictionaries. 
         The dictionaries do not require matching key sets as a 
         master-list of keys is generated in the process of 
@@ -751,9 +752,9 @@ class PureResponseClient(object):
             count += 1
         return entity_data
     
-    def _fixtype_value(self, value):
+    def _fixtype_value(self, key, value):
         if isinstance(value, str) or isinstance(value, unicode):
-            return value
+            return (value.encode('utf-8')).replace('\n', '\u000a')
         else:
             return str(value)
     
@@ -776,7 +777,7 @@ class PureResponseClient(object):
         csv_writer.writerow(dict([ (k, k) for k in master ]))
         for item in list_:
             csv_writer.writerow(dict(
-                [ (k, self._fixtype_value(v).encode('utf-8')) for k, v in item.iteritems() ]
+                [ (k, self._fixtype_value(k, v)) for k, v in item.iteritems() ]
             ))
         output = csv_string.getvalue()
         csv_string.close()
