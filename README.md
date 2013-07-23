@@ -41,6 +41,6 @@ Will send a specified email message to a given list of recipients. Uses values f
 from pypurepaint import PureResponseClient as Pure
 pure = Pure()
 pure.api_authenticate('username', 'password')
-pure.api_send_to_list('example_customer_list_name', 'example_message_name')
+pure.api_send_to_list('example_list_name', 'example_message_name')
 pure.api_invalidate()
 ```
