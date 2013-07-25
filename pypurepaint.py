@@ -68,7 +68,6 @@ class PureResponseClient(object):
         EMAIL_COLUMN        = 'emailCol'
         MOBILE              = 'mobile'
         MOBILE_COLUMN       = 'mobileCol'
-        DUMMY_COLUMN        = 'PAINT_DUMMY_COLUMN'
         MESSAGE_ID          = 'messageId'
         MESSAGE_NAME        = 'messageName'
         SUBJECT             = 'subject'
@@ -102,7 +101,6 @@ class PureResponseClient(object):
         ACCOUNT_LEVEL_PRO       = 20
         ACCOUNT_LEVEL_EXPERT    = 40
         SCHEDULING_DELAY        = 3
-        FIRST_COLUMN_INDEX      = 0
     
     class EXCEPTIONS:
         VALIDATION          = 'bean_exception_validation'
