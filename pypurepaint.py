@@ -96,10 +96,13 @@ class PureResponseClient(object):
         APPEND                  = 'APPEND'
         SUCCESS                 = 'success'
         SCHEDULING_UNIT         = 'minutes'
-        ACCOUNT_LEVEL_LITE     = 10
-        ACCOUNT_LEVEL_PRO      = 20
-        ACCOUNT_LEVEL_EXPERT   = 40
+        NEW_LINE                = '\n'
+        EMPTY_STRING            = ''
+        ACCOUNT_LEVEL_LITE      = 10
+        ACCOUNT_LEVEL_PRO       = 20
+        ACCOUNT_LEVEL_EXPERT    = 40
         SCHEDULING_DELAY        = 3
+        FIRST_COLUMN_INDEX      = 0
     
     class EXCEPTIONS:
         VALIDATION          = 'bean_exception_validation'
@@ -214,7 +217,7 @@ class PureResponseClient(object):
                     }
                 else:
                     return self._dict_err(
-                        PureResponseClient.ERRORS.ERROR_CAMPAIGN_NOT_FOUND
+                        PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
                       , self._response_data(search_response)
                     )
             else:
@@ -657,6 +660,7 @@ class PureResponseClient(object):
     def api_add_contact(self, list_name, contact):
         """
         Add single contact to a given contact list.
+        Alias for _api_add_contact_ambiguous.
         ----------------------------------------------
         @param list_name        - name of contact list to append to
         @param contact          - dictionary of contact data
@@ -666,6 +670,7 @@ class PureResponseClient(object):
     def api_add_contacts(self, list_name, contacts):
         """
         Add multiple contacts to a given contact list.
+        Alias for _api_add_contact_ambiguous.
         The contacts parameter should be a list of dictionaries. 
         The dictionaries do not require matching key sets as a 
         master-list of keys is generated in the process of 
@@ -843,9 +848,12 @@ class PureResponseClient(object):
             count += 1
         return entity_data
     
-    def _fixtype_value(self, value):
+    def _fixtype_value(self, key, value):
         if isinstance(value, str) or isinstance(value, unicode):
-            return value
+            return (value.encode('utf-8')).replace(
+                PureResponseClient.VALUES.NEW_LINE
+              , PureResponseClient.VALUES.EMPTY_STRING
+            )
         else:
             return str(value)
     
@@ -862,13 +870,16 @@ class PureResponseClient(object):
         for row in list_:
             master = master.union(row.keys())
         master = sorted(list(master))
-        master.insert(0, PureResponseClient.FIELDS.DUMMY_COLUMN) # fix: first column removal
+        master.insert(
+            PureResponseClient.VALUES.FIRST_COLUMN_INDEX
+          , PureResponseClient.FIELDS.DUMMY_COLUMN
+        ) # fix: first column removal
         csv_string = StringIO.StringIO()
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
         for item in list_:
             csv_writer.writerow(dict(
-                [ (k, self._fixtype_value(v).encode('utf-8')) for k, v in item.iteritems() ]
+                [ (k, self._fixtype_value(k, v)) for k, v in item.iteritems() ]
             ))
         output = csv_string.getvalue()
         csv_string.close()
@@ -883,17 +894,4 @@ class PureResponseClient(object):
         @param dict_        - dictionary to convert.
         """
         return self._dictlist_to_csv([dict_])
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
 
