@@ -71,6 +71,8 @@ class PureResponseClient(object):
         DUMMY_COLUMN        = 'PAINT_DUMMY_COLUMN'
         MESSAGE_ID          = 'messageId'
         MESSAGE_NAME        = 'messageName'
+        SUBJECT             = 'subject'
+        BODY_HTML           = 'bodyHtml'
         BEAN_ID             = 'beanId'
         LIST_IDS            = 'listIds'
         LIST_ID             = 'listId'
@@ -111,6 +113,8 @@ class PureResponseClient(object):
         AUTH_PARAMS         = 'ERROR_AUTHENTICATION_PARAMETERS'
         AUTH_PROCESS        = 'ERROR_AUTHENTICATION_PROCESS'
         LIST_NAME_EXISTS    = 'ERROR_LIST_NAME_EXISTS'
+        MESSAGE_NAME_EXISTS = 'ERROR_MESSAGE_NAME_EXISTS'
+        MESSAGE_NOT_SAVED   = 'ERROR_MESSAGE_NOT_SAVED'
         LIST_NOT_FOUND      = 'ERROR_LIST_NOT_FOUND'
         LIST_NOT_SAVED      = 'ERROR_LIST_NOT_SAVED'
         LIST_NOT_REMOVED    = 'ERROR_LIST_NOT_REMOVED'
@@ -330,6 +334,92 @@ class PureResponseClient(object):
               , self._response_data(create)
             )
     
+    def api_create_email(self, message_name, subject, message_body):
+        """
+        Create a new email message for one-to-one or bulk 
+        campaign sending.
+        ----------------------------------------------
+        @param message_name     - Unique message name.
+        @param subject          - Desired subject line.
+        @param message_body     - Message content, html enabled.
+        """
+        search_response = self.api_make_request(
+            PureResponseClient.BEAN_TYPES.FACADE
+          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+          , PureResponseClient.BEAN_PROCESSES.SEARCH
+          , {PureResponseClient.FIELDS.MESSAGE_NAME : message_name}
+        )
+        if self._result_success(search_response):
+            found = self._get_found_data(
+                search_response
+              , PureResponseClient.BEAN_TYPES.SEARCH
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+            )
+            
+            for key in found:
+                entity_data = found[key]
+                load_response = self.api_make_request(
+                    PureResponseClient.BEAN_TYPES.FACADE
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+                  , PureResponseClient.BEAN_PROCESSES.LOAD
+                  , entity_data
+                )
+                
+                if not self._result_success(load_response):
+                    continue
+                
+                load_output = self._response_data(
+                    load_response
+                  , PureResponseClient.BEAN_TYPES.ENTITY
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+                )
+                
+                loaded_name = load_output.get(
+                    PureResponseClient.FIELDS.MESSAGE_NAME
+                )
+                if (unicode(loaded_name) == unicode(message_name)):
+                    return self._dict_err(
+                        PureResponseClient.ERRORS.MESSAGE_NAME_EXISTS
+                    )
+            
+            create_response = self.api_make_request(
+                PureResponseClient.BEAN_TYPES.FACADE
+              , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+              , PureResponseClient.BEAN_PROCESSES.CREATE
+            )
+            
+            if self._result_success(create_response):
+                entity_data = {
+                    PureResponseClient.FIELDS.MESSAGE_NAME  : message_name
+                  , PureResponseClient.FIELDS.SUBJECT       : subject
+                  , PureResponseClient.FIELDS.BODY_HTML     : message_body
+                  , PureResponseClient.FIELDS.BEAN_ID       : self._get_bean_id(
+                        create_response
+                      , PureResponseClient.BEAN_TYPES.ENTITY
+                      , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+                  )
+                }
+                
+                response = self.api_make_request(
+                    PureResponseClient.BEAN_TYPES.FACADE
+                  , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+                  , PureResponseClient.BEAN_PROCESSES.STORE
+                  , entity_data
+                )
+                
+                if self._result_success(response):
+                    return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
+                else:
+                    return self._dict_err(
+                        PureResponseClient.ERRORS.MESSAGE_NOT_SAVED
+                      , self._response_data(response)
+                    )
+            else:
+                return self._dict_err(
+                    PureResponseClient.ERRORS.BEAN_NOT_CREATED
+                  , self._response_data(create_response)
+                )
+    
     def api_create_contact_list(self, list_name, list_data
         , notify_uri = None, overwrite_existing = False):
         """
@@ -472,7 +562,10 @@ class PureResponseClient(object):
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
             )
             
-            if (unicode(load_output.get(PureResponseClient.FIELDS.LIST_NAME)) == unicode(list_name)):
+            loaded_name = load_output.get(
+                PureResponseClient.FIELDS.LIST_NAME
+            )
+            if (unicode(loaded_name) == unicode(list_name)):
                 entity_data = {
                     PureResponseClient.FIELDS.BEAN_ID : load_output[
                         PureResponseClient.FIELDS.BEAN_ID
@@ -518,6 +611,7 @@ class PureResponseClient(object):
               , PureResponseClient.BEAN_PROCESSES.STORE
               , entity_data
             )
+            
             if self._result_success(response):
                 return self._dict_ok(PureResponseClient.VALUES.SUCCESS)
             else:

@@ -34,3 +34,13 @@ pure.api_authenticate('username', 'password')
 pure.api_send_to_contact('blackhole@example.none', 'example_message_name')
 pure.api_invalidate()
 ```
+
+**Bulk campaign sending to a list**  
+Will send a specified email message to a given list of recipients. Uses values found in the list data if possible, falling back to default values for custom fields if necessary.
+```python
+from pypurepaint import PureResponseClient as Pure
+pure = Pure()
+pure.api_authenticate('username', 'password')
+pure.api_send_to_list('example_list_name', 'example_message_name')
+pure.api_invalidate()
+```
