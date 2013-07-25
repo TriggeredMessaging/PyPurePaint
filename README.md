@@ -25,6 +25,17 @@ pure.api_create_contact_list('new_list_name', [{
 pure.api_invalidate()
 ```
 
+**Create a new email message.**  
+Will create an email that can be sent as a one-to-one message or a bulk campaign email.
+```python
+from pypurepaint import PureResponseClient as Pure
+pure = Pure()
+pure.api_authenticate('username', 'password')
+message_body = 'This is an <strong>example email</strong>'
+pure.api_create_email('example_message_name', 'hello world', message_body)
+pure.api_invalidate()
+```
+
 **Send a one-to-one message.**  
 Optionally supply custom merge fields for the recipient as a third parameter.
 ```python
