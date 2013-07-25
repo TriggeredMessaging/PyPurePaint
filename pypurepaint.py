@@ -833,7 +833,7 @@ class PureResponseClient(object):
                 (key == unicode(PureResponseClient.FIELDS.MOBILE))):
                 entity_data[PureResponseClient.FIELDS.MOBILE_COLUMN] = count
             else:
-                field_whole = PureResponseClient.FIELDS.FIELD_PARTIAL + str(count)
+                field_whole = PureResponseClient.FIELDS.FIELD_PARTIAL + str(count + 1)
                 entity_data[
                     field_whole
                   + PureResponseClient.FIELDS.COLUMN_PARTIAL
@@ -870,10 +870,6 @@ class PureResponseClient(object):
         for row in list_:
             master = master.union(row.keys())
         master = sorted(list(master))
-        master.insert(
-            PureResponseClient.VALUES.FIRST_COLUMN_INDEX
-          , PureResponseClient.FIELDS.DUMMY_COLUMN
-        ) # fix: first column removal
         csv_string = StringIO.StringIO()
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
