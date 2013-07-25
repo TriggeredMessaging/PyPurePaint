@@ -25,6 +25,28 @@ pure.api_create_contact_list('new_list_name', [{
 pure.api_invalidate()
 ```
 
+**Add a new contact (or several) to a list.**  
+Any fields that don't already exist in the list will be ignored.
+```python
+from pypurepaint import PureResponseClient as Pure
+pure = Pure()
+pure.api_authenticate('username', 'password')
+pure.api_add_contact('contact_list_name', {
+    'email' : 'blackhole+a@example.none'
+  , 'name'  : 'Jane Doe'
+})
+pure.api_add_contacts('contact_list_name', [{
+        'email' : 'blackhole+b@example.none'
+      , 'name'  : 'Jack Doe'
+    }
+  , {
+        'email' : 'blackhole+c@example.none'
+      , 'name'  : 'Jill Doe'
+    }]
+)
+pure.api_invalidate()
+```
+
 **Create a new email message.**  
 Will create an email that can be sent as a one-to-one message or a bulk campaign email.
 ```python
