@@ -90,6 +90,7 @@ class PureResponseClient(object):
         COLUMN_PARTIAL      = 'Col'
         NAME_PARTIAL        = 'Name'
         BASE64_PARTIAL      = '_base64'
+        FIRST_INDEX         = '0'
     
     class VALUES:
         APPEND                  = 'APPEND'
@@ -113,11 +114,11 @@ class PureResponseClient(object):
         LIST_NAME_EXISTS    = 'ERROR_LIST_NAME_EXISTS'
         MESSAGE_NAME_EXISTS = 'ERROR_MESSAGE_NAME_EXISTS'
         MESSAGE_NOT_SAVED   = 'ERROR_MESSAGE_NOT_SAVED'
+        MESSAGE_NOT_FOUND   = 'ERROR_MESSAGE_NOT_FOUND'
         LIST_NOT_FOUND      = 'ERROR_LIST_NOT_FOUND'
         LIST_NOT_SAVED      = 'ERROR_LIST_NOT_SAVED'
         LIST_NOT_REMOVED    = 'ERROR_LIST_NOT_REMOVED'
         CONTACT_NOT_FOUND   = 'ERROR_CONTACT_NOT_FOUND'
-        CAMPAIGN_NOT_FOUND  = 'ERROR_CAMPAIGN_NOT_FOUND'
         BEAN_NOT_CREATED    = 'ERROR_BEAN_NOT_CREATED'
         COULD_NOT_DELIVER   = 'ERROR_COULD_NOT_DELIVER'
         INVALID_PARAMS      = 'ERROR_INVALID_PARAMETERS'
@@ -210,12 +211,44 @@ class PureResponseClient(object):
                   , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
                 )
                 if len(found) is not 0:
-                    delivery_input[PureResponseClient.FIELDS.LIST_IDS] = {
-                        '0': found['0'].get(PureResponseClient.FIELDS.LIST_ID)
-                    }
+                    loaded = False
+                    for key in found:
+                        entity_data = found[key]
+                        load_response = self.api_make_request(
+                            PureResponseClient.BEAN_TYPES.FACADE
+                          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+                          , PureResponseClient.BEAN_PROCESSES.LOAD
+                          , entity_data
+                        )
+                        
+                        if not self._result_success(load_response):
+                            continue
+                        
+                        load_output = self._response_data(
+                            load_response
+                          , PureResponseClient.BEAN_TYPES.ENTITY
+                          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
+                        )
+                        
+                        loaded_name = load_output.get(
+                            PureResponseClient.FIELDS.LIST_NAME
+                        )
+                        
+                        if (unicode(loaded_name) == unicode(list_name)):
+                            delivery_input[PureResponseClient.FIELDS.LIST_IDS] = {
+                                PureResponseClient.FIELDS.FIRST_INDEX : found[
+                                    PureResponseClient.FIELDS.FIRST_INDEX
+                                ].get(PureResponseClient.FIELDS.LIST_ID)
+                            }
+                            loaded = True
+                    if loaded is False:
+                        return self._dict_err(
+                            PureResponseClient.ERRORS.LIST_NOT_FOUND
+                          , self._response_data(search_response)
+                        )
                 else:
                     return self._dict_err(
-                        PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
+                        PureResponseClient.ERRORS.LIST_NOT_FOUND
                       , self._response_data(search_response)
                     )
             else:
@@ -237,13 +270,45 @@ class PureResponseClient(object):
                   , PureResponseClient.BEAN_TYPES.SEARCH
                   , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
                 )
-                if len(found) is 1:
-                    delivery_input[
-                        PureResponseClient.FIELDS.MESSAGE_ID
-                    ] = found['0'].get(PureResponseClient.FIELDS.MESSAGE_ID)
+                if len(found) is not 0:
+                    loaded = False
+                    for key in found:
+                        entity_data = found[key]
+                        load_response = self.api_make_request(
+                            PureResponseClient.BEAN_TYPES.FACADE
+                          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+                          , PureResponseClient.BEAN_PROCESSES.LOAD
+                          , entity_data
+                        )
+                        
+                        if not self._result_success(load_response):
+                            continue
+                        
+                        load_output = self._response_data(
+                            load_response
+                          , PureResponseClient.BEAN_TYPES.ENTITY
+                          , PureResponseClient.BEAN_CLASSES.CAMPAIGN_EMAIL
+                        )
+                        
+                        loaded_name = load_output.get(
+                            PureResponseClient.FIELDS.MESSAGE_NAME
+                        )
+                        
+                        if (unicode(loaded_name) == unicode(message_name)):
+                            delivery_input[
+                                PureResponseClient.FIELDS.MESSAGE_ID
+                            ] = found[
+                                PureResponseClient.FIELDS.FIRST_INDEX
+                            ].get(PureResponseClient.FIELDS.MESSAGE_ID)
+                            loaded = True
+                    if loaded is False:
+                        return self._dict_err(
+                            PureResponseClient.ERRORS.MESSAGE_NOT_FOUND
+                          , self._response_data(search_response)
+                        )
                 else:
                     return self._dict_err(
-                        PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
+                        PureResponseClient.ERRORS.MESSAGE_NOT_FOUND
                       , self._response_data(search_response)
                     )
             else:
