@@ -94,10 +94,13 @@ class PureResponseClient(object):
         APPEND                  = 'APPEND'
         SUCCESS                 = 'success'
         SCHEDULING_UNIT         = 'minutes'
-        ACCOUNT_LEVEL_LITE     = 10
-        ACCOUNT_LEVEL_PRO      = 20
-        ACCOUNT_LEVEL_EXPERT   = 40
+        NEW_LINE                = '\n'
+        EMPTY_STRING            = ''
+        ACCOUNT_LEVEL_LITE      = 10
+        ACCOUNT_LEVEL_PRO       = 20
+        ACCOUNT_LEVEL_EXPERT    = 40
         SCHEDULING_DELAY        = 3
+        FIRST_COLUMN_INDEX      = 0
     
     class EXCEPTIONS:
         VALIDATION          = 'bean_exception_validation'
@@ -210,7 +213,7 @@ class PureResponseClient(object):
                     }
                 else:
                     return self._dict_err(
-                        PureResponseClient.ERRORS.ERROR_CAMPAIGN_NOT_FOUND
+                        PureResponseClient.ERRORS.CAMPAIGN_NOT_FOUND
                       , self._response_data(search_response)
                     )
             else:
@@ -326,7 +329,6 @@ class PureResponseClient(object):
                 PureResponseClient.ERRORS.GENERIC
               , self._response_data(create)
             )
-    
     
     def api_create_contact_list(self, list_name, list_data
         , notify_uri = None, overwrite_existing = False):
@@ -754,7 +756,10 @@ class PureResponseClient(object):
     
     def _fixtype_value(self, key, value):
         if isinstance(value, str) or isinstance(value, unicode):
-            return (value.encode('utf-8')).replace('\n', '\u000a')
+            return (value.encode('utf-8')).replace(
+                PureResponseClient.VALUES.NEW_LINE
+              , PureResponseClient.VALUES.EMPTY_STRING
+            )
         else:
             return str(value)
     
@@ -771,7 +776,10 @@ class PureResponseClient(object):
         for row in list_:
             master = master.union(row.keys())
         master = sorted(list(master))
-        master.insert(0, PureResponseClient.FIELDS.DUMMY_COLUMN) # fix: first column removal
+        master.insert(
+            PureResponseClient.VALUES.FIRST_COLUMN_INDEX
+          , PureResponseClient.FIELDS.DUMMY_COLUMN
+        ) # fix: first column removal
         csv_string = StringIO.StringIO()
         csv_writer = csv.DictWriter(csv_string, master)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
@@ -792,17 +800,4 @@ class PureResponseClient(object):
         @param dict_        - dictionary to convert.
         """
         return self._dictlist_to_csv([dict_])
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
 
