@@ -25,7 +25,7 @@ pure.api_create_contact_list('new_list_name', [{
 pure.api_invalidate()
 ```
 
-**Add a new contact to a list.**  
+**Add a new contact (or several) to a list.**  
 Any fields that don't already exist in the list will be ignored.
 ```python
 from pypurepaint import PureResponseClient as Pure
@@ -35,12 +35,6 @@ pure.api_add_contacts('contact_list_name', [{
     'email' : 'blackhole@example.none'
   , 'name'  : 'Jane Doe'
 }])
-
-
-result = pure.api_add_contacts('tms-api-create-test-h', [
-    {'username' : 'USERNAME7837', 'club' : 'CLUB5754764', 'hometown' : 'HOMETOWN14560', 'email' : 'test.mailings+tmspd_68599@triggeredmessaging.com', 'attenzion' : 'AYAAAAAYAYAYAY'}
-  , {'username' : 'USERNAME5627', 'club' : 'CLUB4446', 'hometown' : 'HOMETOWN4671', 'email' : 'test.mailings+tmspd_673@triggeredmessaging.com', 'position' : 'Striker (Centre)'}
-])
 pure.api_invalidate()
 ```
 
