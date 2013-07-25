@@ -31,10 +31,20 @@ Any fields that don't already exist in the list will be ignored.
 from pypurepaint import PureResponseClient as Pure
 pure = Pure()
 pure.api_authenticate('username', 'password')
-pure.api_add_contacts('contact_list_name', [{
-    'email' : 'blackhole@example.none'
+pure.api_add_contact('contact_list_name', {
+    'email' : 'blackhole+a@example.none'
   , 'name'  : 'Jane Doe'
-}])
+})
+
+pure.api_add_contacts('contact_list_name', [{
+        'email' : 'blackhole+b@example.none'
+      , 'name'  : 'Jack Doe'
+    }
+  , {
+        'email' : 'blackhole+c@example.none'
+      , 'name'  : 'Jill Doe'
+    }]
+)
 pure.api_invalidate()
 ```
 
