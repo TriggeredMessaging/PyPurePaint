@@ -35,7 +35,6 @@ pure.api_add_contact('contact_list_name', {
     'email' : 'blackhole+a@example.none'
   , 'name'  : 'Jane Doe'
 })
-
 pure.api_add_contacts('contact_list_name', [{
         'email' : 'blackhole+b@example.none'
       , 'name'  : 'Jack Doe'
