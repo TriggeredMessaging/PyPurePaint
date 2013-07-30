@@ -18,7 +18,7 @@ import csv
 import base64
 
 class PureResponseClient(object):
-    version = '0.1'
+    version = '1.1'
     
     api_username    = None
     api_password    = None
@@ -172,7 +172,9 @@ class PureResponseClient(object):
           , PureResponseClient.BEAN_PROCESSES.INVALIDATE
           , no_response = True
         )
-        self.api_context = None
+        self.api_context    = None
+        self.api_password   = ''
+        self.api_username   = ''
     
     def api_send_to_list(self, list_name, message_name, scheduling_delay = {
         VALUES.SCHEDULING_UNIT : VALUES.SCHEDULING_DELAY}):
