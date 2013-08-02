@@ -18,7 +18,7 @@ import csv
 import base64
 
 class PureResponseClient(object):
-    version = '1.1'
+    version = '1.1.1'
     
     api_username    = None
     api_password    = None
@@ -96,7 +96,6 @@ class PureResponseClient(object):
         APPEND                  = 'APPEND'
         SUCCESS                 = 'success'
         SCHEDULING_UNIT         = 'minutes'
-        PURE_CSV_DIALECT        = 'pure-dialect'
         NEW_LINE                = '\n'
         EMPTY_STRING            = ''
         ACCOUNT_LEVEL_LITE      = 10
@@ -345,7 +344,7 @@ class PureResponseClient(object):
                     PureResponseClient.ERRORS.COULD_NOT_DELIVER
                   , self._response_data(response)
                 )
-        elif create.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+        elif self._get_result(create) is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
             return create
         else:
             return self._dict_err(
@@ -400,7 +399,7 @@ class PureResponseClient(object):
                     PureResponseClient.ERRORS.COULD_NOT_DELIVER
                   , self._response_data(response)
                 )
-        elif create.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+        elif self._get_result(create) is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
             return create
         else:
             return self._dict_err(
@@ -967,7 +966,6 @@ class PureResponseClient(object):
             ))
         output = csv_string.getvalue()
         csv_string.close()
-        print output
         return output
         
     def _dict_to_csv(self, dict_):
