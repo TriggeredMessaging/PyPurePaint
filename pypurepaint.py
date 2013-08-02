@@ -96,12 +96,21 @@ class PureResponseClient(object):
         APPEND                  = 'APPEND'
         SUCCESS                 = 'success'
         SCHEDULING_UNIT         = 'minutes'
+        PURE_CSV_DIALECT        = 'pure-dialect'
         NEW_LINE                = '\n'
         EMPTY_STRING            = ''
         ACCOUNT_LEVEL_LITE      = 10
         ACCOUNT_LEVEL_PRO       = 20
         ACCOUNT_LEVEL_EXPERT    = 40
         SCHEDULING_DELAY        = 3
+    
+    class CSV_DIALECT:
+        NAME                    = 'pure-csv-dialect'
+        ESCAPE_CHAR             = '\\'
+        QUOTE_CHAR              = '"'
+        STRIP_SPACE             = True
+        QUOTING                 = csv.QUOTE_MINIMAL
+        
     
     class EXCEPTIONS:
         VALIDATION          = 'bean_exception_validation'
@@ -937,7 +946,20 @@ class PureResponseClient(object):
             master = master.union(row.keys())
         master = sorted(list(master))
         csv_string = StringIO.StringIO()
-        csv_writer = csv.DictWriter(csv_string, master, dialect=csv.QUOTE_ALL)
+        
+        csv.register_dialect(
+            PureResponseClient.CSV_DIALECT.NAME
+          , escapechar          = PureResponseClient.CSV_DIALECT.ESCAPE_CHAR
+          , quotechar           = PureResponseClient.CSV_DIALECT.QUOTE_CHAR
+          , quoting             = PureResponseClient.CSV_DIALECT.QUOTING
+          , skipinitialspace    = PureResponseClient.CSV_DIALECT.STRIP_SPACE
+        )
+        
+        csv_writer = csv.DictWriter(
+            csv_string
+          , master
+          , dialect     = PureResponseClient.CSV_DIALECT.NAME
+        )
         csv_writer.writerow(dict([ (k, k) for k in master ]))
         for item in list_:
             csv_writer.writerow(dict(
