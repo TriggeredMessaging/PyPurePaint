@@ -528,7 +528,7 @@ class PureResponseClient(object):
                     PureResponseClient.ERRORS.LIST_NAME_EXISTS
                   , self._response_data(search_response)
                 )
-        elif search_response.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+        elif self._get_result(search_response) is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
             return search_response
         else:
             return self._dict_err(
@@ -648,7 +648,7 @@ class PureResponseClient(object):
           , found
         )
     
-    def _api_append_contact_list(self, entity_data):
+    def _api_append_contact_list(self, entity_data, notify_uri):
         """
         Internal use.
         Abstraction layer between built entity data 
@@ -670,6 +670,7 @@ class PureResponseClient(object):
               , PureResponseClient.BEAN_TYPES.ENTITY
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
             )
+            entity_data[PureResponseClient.FIELDS.UPLOAD_NOTIFY_URI] = notify_uri
             response = self.api_make_request(
                 PureResponseClient.BEAN_TYPES.FACADE
               , PureResponseClient.BEAN_CLASSES.CAMPAIGN_LIST
@@ -684,7 +685,7 @@ class PureResponseClient(object):
                     PureResponseClient.ERRORS.LIST_NOT_SAVED
                   , self._response_data(response)
                 )
-        elif create.get('result') is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
+        elif self._get_result(create) is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
             return create
         else:
             return self._dict_err(
@@ -692,7 +693,7 @@ class PureResponseClient(object):
               , self._response_data(create)
             )
     
-    def _api_add_contact_ambiguous(self, list_name, contact_data):
+    def _api_add_contact_ambiguous(self, list_name, contact_data, notify_uri):
         """
         Internal use.
         Abstraction layer between publically exposed functions 
@@ -720,9 +721,9 @@ class PureResponseClient(object):
             entity_data
           , **self._build_contact_entity(paste_file)
         )
-        return self._api_append_contact_list(entity_data)
+        return self._api_append_contact_list(entity_data, notify_uri)
         
-    def api_add_contact(self, list_name, contact):
+    def api_add_contact(self, list_name, contact, notify_uri = None):
         """
         Add single contact to a given contact list.
         Alias for _api_add_contact_ambiguous.
@@ -730,9 +731,9 @@ class PureResponseClient(object):
         @param list_name        - name of contact list to append to
         @param contact          - dictionary of contact data
         """
-        return self._api_add_contact_ambiguous(list_name, contact)
+        return self._api_add_contact_ambiguous(list_name, contact, notify_uri)
     
-    def api_add_contacts(self, list_name, contacts):
+    def api_add_contacts(self, list_name, contacts, notify_uri = None):
         """
         Add multiple contacts to a given contact list.
         Alias for _api_add_contact_ambiguous.
@@ -744,7 +745,7 @@ class PureResponseClient(object):
         @param list_name        - name of contact list to append to
         @param contacts         - list of dictionaries
         """
-        return self._api_add_contact_ambiguous(list_name, contacts)
+        return self._api_add_contact_ambiguous(list_name, contacts, notify_uri)
     
     def api_make_request(self, bean_type, bean_class, bean_process
       , entity_data = None, process_data = None, no_response = False):
@@ -936,7 +937,7 @@ class PureResponseClient(object):
             master = master.union(row.keys())
         master = sorted(list(master))
         csv_string = StringIO.StringIO()
-        csv_writer = csv.DictWriter(csv_string, master)
+        csv_writer = csv.DictWriter(csv_string, master, dialect=csv.QUOTE_ALL)
         csv_writer.writerow(dict([ (k, k) for k in master ]))
         for item in list_:
             csv_writer.writerow(dict(
@@ -944,6 +945,7 @@ class PureResponseClient(object):
             ))
         output = csv_string.getvalue()
         csv_string.close()
+        print output
         return output
         
     def _dict_to_csv(self, dict_):
