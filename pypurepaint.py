@@ -18,7 +18,7 @@ import csv
 import base64
 
 class PureResponseClient(object):
-    version = '1.1.1'
+    version = '1.1.2' #major.minor.patch
     
     api_username    = None
     api_password    = None
