@@ -83,6 +83,7 @@ class PureResponseClient(object):
         MSG_MSG_NAME        = 'message_messageName'
         TO_ADDRESS          = 'toAddress'
         CUSTOM_DATA         = 'customData'
+        CONTENT_TYPE        = 'contentType'
         UPLOAD_TYPE         = 'uploadTransactionType'
         UPLOAD_NOTIFY_URI   = 'uploadFileNotifyEmail'
         PASTE_FILE          = 'pasteFile'
@@ -97,7 +98,9 @@ class PureResponseClient(object):
         SUCCESS                 = 'success'
         SCHEDULING_UNIT         = 'minutes'
         NEW_LINE                = '\n'
+        CARRIAGE_RETURN         = '\r'
         EMPTY_STRING            = ''
+        SPACE_STRING            = ' '
         ACCOUNT_LEVEL_LITE      = 10
         ACCOUNT_LEVEL_PRO       = 20
         ACCOUNT_LEVEL_EXPERT    = 40
@@ -402,11 +405,16 @@ class PureResponseClient(object):
         elif self._get_result(create) is PureResponseClient.ERRORS.NOT_AUTHENTICATED:
             return create
         else:
+            response_data = self._response_data(create)
+            if 'new message' in response_data.get(PureResponseClient.FIELDS.CONTENT_TYPE):
+                return self._dict_err(
+                    PureResponseClient.ERRORS.MESSAGE_NOT_FOUND
+                  , response_data
+                )
             return self._dict_err(
                 PureResponseClient.ERRORS.GENERIC
-              , self._response_data(create)
+              , response_data
             )
-    
     def api_create_email(self, message_name, subject, message_body):
         """
         Create a new email message for one-to-one or bulk 
@@ -926,6 +934,9 @@ class PureResponseClient(object):
         if isinstance(value, str) or isinstance(value, unicode):
             return (value.encode('utf-8')).replace(
                 PureResponseClient.VALUES.NEW_LINE
+              , PureResponseClient.VALUES.SPACE_STRING
+            ).replace(
+                PureResponseClient.VALUES.CARRIAGE_RETURN
               , PureResponseClient.VALUES.EMPTY_STRING
             )
         else:
